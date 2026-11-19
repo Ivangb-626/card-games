@@ -2,7 +2,7 @@
 
 ## Estado de diseño
 
-Las reglas de producto están confirmadas. Para equilibrar rapidez de desarrollo, mantenimiento y coste, la fundación visual usa React + TypeScript + Vite. Esta decisión cubre únicamente el frontend de la fase 1; la PWA completa, el backend Node.js, WebSockets, PostgreSQL y el proveedor concreto de alojamiento, base de datos y tiempo real quedan pendientes de una fase posterior.
+Las reglas de producto están confirmadas. Para equilibrar rapidez de desarrollo, mantenimiento y coste, la fundación visual usa React + TypeScript + Vite. La persistencia digital se realizará con Supabase Postgres, la sincronización de salas con Supabase Realtime y el acceso se limitará mediante RLS. La PWA y el resto de integración se incorporarán por fases sin implementar en esta etapa documental.
 
 Comandos de la fundación actual:
 
@@ -30,14 +30,19 @@ flowchart LR
   Rules[Motores de reglas]
   Session[Sesiones y salas]
   Presence[Presencia y reconexion]
-  State[Estado persistente]
+  State[Supabase Postgres]
+  Events[Historial de eventos]
+  Realtime[Supabase Realtime]
 
   UI --> Game
   UI --> Session
   Game --> Rules
   Game --> Presence
   Session --> State
-  Presence --> State
+  Presence --> Realtime
+  Realtime --> State
+  Game --> Events
+  Events --> State
 ```
 
 ## Dominio recomendado
@@ -63,7 +68,7 @@ Agrupa configuración, jugadores, rondas y puntuación. Debe tener identificador
 
 ### Ronda
 
-Contiene el estado mutable de una ronda y permite guardar checkpoints de corrección controlada.
+Contiene el estado derivado de una ronda y checkpoints para corrección controlada. Deshacer restaura un checkpoint o reconstruye el estado sin eliminar ni alterar los eventos originales.
 
 ### Turno
 
@@ -74,12 +79,13 @@ Representa el jugador activo y las acciones permitidas. El cambio de turno debe 
 - **Interfaz:** presenta estado, captura acciones y muestra errores.
 - **Dominio:** valida acciones, aplica reglas y produce nuevo estado.
 - **Sala:** controla acceso, jugadores presentes y reincorporación.
-- **Persistencia:** guarda el estado necesario para recuperar una partida.
-- **Sincronización:** distribuye cambios a los clientes conectados.
+- **Persistencia:** guarda eventos, checkpoints y el estado necesario para recuperar una partida en Supabase Postgres.
+- **Sincronización:** distribuye cambios a los clientes conectados mediante Supabase Realtime.
+- **Autorización:** RLS permite que cada jugador consulte y modifique únicamente las salas a las que pertenece.
 
 ## Reglas y estado
 
-El estado de juego debe ser inmutable o reproducible. Cada acción que cambie una ronda debe incluir jugador, acción, versión y marca de tiempo o una estructura equivalente.
+El estado de juego debe ser inmutable o reproducible. Cada acción válida se guarda cronológicamente como evento con jugador, tipo, datos, versión y fecha. El estado visible se deriva de esa secuencia y de los checkpoints de cada ronda.
 
 Las acciones rechazadas deben conservar el estado original y devolver una razón visible. Los cambios de interfaz nunca deben alterar la puntuación directamente.
 
@@ -88,9 +94,10 @@ Las acciones rechazadas deben conservar el estado original y devolver una razón
 Se mantiene un historial de acciones dentro de la ronda:
 
 - Todas las acciones de una ronda pueden deshacerse mientras esta no haya sido confirmada.
+- Cada ronda conserva checkpoints; deshacer restaura el checkpoint correspondiente sin alterar el historial original de eventos.
 - Al confirmar la ronda, solo el creador/administrador puede deshacer cualquier acción posterior permitida por la política de cierre.
 - Un deshacer debe restaurar estado, turno, puntos y cartas derivadas.
-- Debe mostrar la acción revertida y conservar una trazabilidad técnica limitada a la sesión.
+- Debe mostrar la acción revertida y conservar la trazabilidad técnica completa mediante eventos y versiones.
 - Las variantes configurables no pueden desactivar por código las reglas mínimas sin una configuración válida.
 
 ## Reconexión
@@ -102,8 +109,9 @@ El modelo mínimo debe distinguir:
 - Jugador marcado como ausente.
 - Jugador eliminado o expulsado.
 - Sala expirada.
-- Si la desconexión ocurre fuera del turno o el usuario elige ese estado, se muestra como ausente.
-- Si el usuario pierde conexión durante su turno, queda documentado como caso operativo pendiente.
+- Si un jugador no vuelve durante 30 segundos, la partida queda pausada indefinidamente.
+- El anfitrión puede jugar temporalmente por el jugador ausente o expulsarlo.
+- El anfitrión no recibe ventajas en reglas, turnos, fichas ni resolución.
 
 Una reconexión válida recupera asiento, identidad local, puntos y estado para continuar desde la siguiente ronda. La sala expira a los 30 minutos.
 
@@ -111,8 +119,9 @@ Una reconexión válida recupera asiento, identidad local, puntos y estado para 
 
 - La identidad temporal se mantiene en el dispositivo mediante almacenamiento local persistente.
 - El enlace puede contener o derivar un código corto de invitación.
+- Los códigos y enlaces de invitación caducan a las 24 horas.
 - El QR se considera mejora futura y no bloquea el MVP.
-- Persistir el estado necesario tras cerrar el navegador.
+- Persistir eventos, checkpoints y estado necesario tras cerrar el navegador.
 - El modo físico debe conservar estado suficiente para continuar sin red. La sincronización con el modo digital no forma parte del primer hito.
 
 ## Seguridad mínima
@@ -121,7 +130,7 @@ Una reconexión válida recupera asiento, identidad local, puntos y estado para 
 - No confiar en puntos, turnos o barajas enviados por el cliente.
 - Restringir acciones a miembros invitados de la sala.
 - Generar identificadores difíciles de adivinar.
-- Mantener fuera de estadísticas cualquier dato temporal.
+- Mantener fuera de estadísticas de producto cualquier dato técnico temporal.
 - Preparar cabeceras, formularios y enlaces contra usos no previstos.
 
 ## Arquitectura escalable
@@ -140,17 +149,19 @@ La base debe permitir, sin reescribir el dominio:
 | Decisión | Opciones posibles | Estado |
 |---|---|---|
 | Frontend | React + TypeScript + Vite para la fundación visual | Decidido para fase 1 |
-| Backend | Servidor autoritativo, servicios modulares o solución administrada | Pendiente |
-| Tiempo real | WebSockets, servicios administrados o sondeo | Pendiente |
-| Persistencia | Documento, relacional o almacenamiento administrado | Pendiente |
-| Proveedor | Alojamiento administrado o propio | Pendiente |
+| Backend | Supabase como servicio administrado para persistencia, autorización y sincronización | Decidido |
+| Tiempo real | Supabase Realtime para cambios de salas | Decidido |
+| Persistencia | Supabase Postgres con eventos y checkpoints | Decidido |
+| Acceso | RLS por pertenencia a sala | Decidido |
 | Reenganche | Detalle de variantes y empates | Pendiente |
 
 ## Pruebas recomendadas
 
 - Tests unitarios para barajas, turnos, rondas y puntuación.
 - Tests de reglas para chinchón y póker.
-- Tests de reconexión y expiración.
+- Tests de reconexión, pausa indefinida, sustitución temporal, expulsión y expiración.
+- Tests de eventos, versiones, checkpoints y restauración sin mutar el historial.
+- Tests de RLS para acceso autorizado y no autorizado a salas.
 - Tests de invitación y acceso no autorizado.
 - Tests responsive de rutas principales.
 - Tests de accesibilidad de teclado y contraste.

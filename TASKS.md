@@ -12,13 +12,15 @@
 - [x] Confirmar el MVP: chinchón primero y Texas Hold'em como hito siguiente.
 - [x] Confirmar límites de jugadores, barajas y modos.
 - [x] Confirmar código corto, enlace compartible y QR futuro.
+- [x] Confirmar validez de 24 horas para códigos y enlaces de invitación.
 - [x] Confirmar invitados temporales e identidad persistida localmente.
 - [x] Confirmar sala de 30 minutos y persistencia tras cerrar navegador.
 - [x] Confirmar deshacer por ronda y permisos del administrador.
-- [ ] Elegir proveedor concreto de alojamiento, persistencia y tiempo real.
-- [ ] Confirmar el stack propuesto y el proveedor concreto antes de crear dependencias.
-- [ ] Definir la conducta exacta durante pérdida de conexión en el turno.
-- [ ] Definir la política detallada de reenganche y variantes.
+- [x] Confirmar Supabase Postgres, Supabase Realtime y RLS por pertenencia a sala.
+- [x] Confirmar el modelo de eventos con jugador, tipo, datos, versión, fecha y checkpoints por ronda.
+- [x] Confirmar pausa indefinida tras 30 segundos, control temporal o expulsión por el anfitrión y ausencia de ventajas.
+- [x] Confirmar el alcance inicial de Texas Hold'em digital: partida básica completa de 2-9 jugadores.
+- [x] Confirmar que torneos, recompensas y variantes de Texas Hold'em quedan fuera del alcance inicial.
 - [ ] Confirmar pantallas mínimas y tamaños de soporte.
 
 **Dependencias:** las decisiones pendientes no bloquean el diseño visual; sí bloquean reconexión avanzada, variantes y persistencia automática.
@@ -54,6 +56,7 @@
 - [ ] Permitir deshacer una acción válida dentro de la ronda.
 - [ ] Permitir deshacer todas las acciones válidas durante la ronda.
 - [ ] Restringir el deshacer posterior al cierre al creador/administrador.
+- [ ] Guardar eventos cronológicos y checkpoints de cada ronda sin mutar el historial.
 - [ ] Confirmar el cierre de ronda.
 - [ ] Recuperar estado local ante recarga y cierre del navegador.
 - [ ] Configurar PWA y validar operación offline del modo físico.
@@ -68,6 +71,8 @@
 - [ ] Implementar el motor de chinchón como primer hito.
 - [ ] Preparar el motor extensible de Texas Hold'em.
 - [ ] Añadir Texas Hold'em completo como segundo hito digital.
+- [ ] Cubrir ciegas, fichas, apuestas, turnos, all-in y resolución automática en Texas Hold'em inicial.
+- [ ] Excluir torneos, recompensas y variantes del alcance inicial de Texas Hold'em.
 - [ ] Añadir casos de empates o cierre de ronda.
 - [ ] Prohibir acciones fuera de turno.
 - [ ] Añadir pruebas unitarias de reglas normales.
@@ -78,7 +83,7 @@
 ## Fase 4 — Partida digital privada
 
 - [ ] Crear una sala privada.
-- [ ] Generar invitación mediante el mecanismo confirmado.
+- [ ] Generar invitación mediante código corto y enlace compartible con validez de 24 horas.
 - [ ] Validar acceso por invitación.
 - [ ] Permitir entrar como invitado.
 - [ ] Sincronizar estado de la sala.
@@ -86,8 +91,13 @@
 - [ ] Mostrar estado de conexión.
 - [ ] Mostrar jugadores como ausentes fuera del turno o por elección.
 - [ ] Permitir reincorporación al asiento.
+- [ ] Pausar indefinidamente la partida si no vuelve en 30 segundos.
+- [ ] Permitir al anfitrión jugar temporalmente por el jugador ausente o expulsarlo.
+- [ ] Mantener las mismas mecánicas para anfitrión y demás jugadores.
 - [ ] Evitar duplicar jugadores al reconectar.
-- [ ] Persistir el estado mínimo necesario.
+- [ ] Persistir eventos, checkpoints y estado mínimo necesario en Supabase Postgres.
+- [ ] Sincronizar salas mediante Supabase Realtime.
+- [ ] Aplicar RLS para restringir cada sala a sus jugadores.
 - [ ] Recuperar puntos y estado para continuar desde la siguiente ronda.
 - [ ] Caducar salas a los 30 minutos.
 - [ ] Añadir español e inglés.
@@ -109,8 +119,5 @@
 
 ## Preguntas abiertas que bloquean inicio
 
-- ¿Qué comportamiento exacto debe tener un jugador que pierde conexión durante su turno?
 - ¿Cómo se resuelve el reenganche en empates y variantes configurables?
-- ¿Qué proveedor concreto cumple mejor coste, latencia y facilidad de despliegue?
 - ¿Qué secuencia de confirmación debe aplicar el cierre de ronda cuando participa el administrador?
-- ¿Qué ocurre si una sala expira o un jugador ausente no vuelve?

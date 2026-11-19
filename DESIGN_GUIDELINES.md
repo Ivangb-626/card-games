@@ -62,6 +62,9 @@ Diseñar explícitamente:
 - Error de invitación o acceso.
 - Reconexión.
 - Jugador ausente.
+- Partida pausada indefinidamente tras 30 segundos sin retorno.
+- Control temporal del jugador ausente por el anfitrión.
+- Expulsión de un jugador ausente.
 - Sala próxima a expirar.
 - Identidad temporal y entrada por invitación.
 - Continuación offline en modo físico.
@@ -78,6 +81,8 @@ Diseñar explícitamente:
 - Permitir deshacer dentro de la ronda sin reiniciar la partida.
 - Restringir la función posterior al cierre solo al creador/administrador.
 - Mostrar el estado de conexión y la ausencia sin representar al jugador como desconectado del juego.
+- Explicar la pausa indefinida y ofrecer al anfitrión las acciones de control temporal o expulsión.
+- Indicar siempre que el anfitrión no obtiene ventajas mecánicas.
 
 ## Color
 

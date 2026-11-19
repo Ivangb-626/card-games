@@ -33,9 +33,13 @@ Un agente no debe sustituir estas decisiones por suposiciones:
 - Póker Texas Hold'em para 2-9 jugadores.
 - Invitados admitidos con nombre temporal e identidad local persistente.
 - Login opcional futuro para amigos y perfiles.
-- Código corto y enlace compartible; QR futuro.
+- Código corto y enlace compartible con validez de 24 horas; QR futuro.
 - Desconexión y reincorporación.
 - Deshacer todas las acciones dentro de la ronda; solo el creador/admin puede deshacer tras confirmar el cierre.
+- Supabase Postgres para persistencia, Supabase Realtime para sincronización y RLS por pertenencia a sala.
+- Historial cronológico de eventos válidos con jugador, tipo, datos, versión y fecha; checkpoints por ronda para deshacer sin alterar el historial.
+- Tras 30 segundos sin volver, la partida queda pausada indefinidamente; el anfitrión puede jugar temporalmente por el ausente o expulsarlo, sin ventajas mecánicas.
+- Texas Hold'em digital inicial completo para 2-9 jugadores con ciegas, fichas, apuestas, turnos, all-in y resolución automática; torneos, recompensas y variantes quedan fuera de alcance.
 - Sala expirada a los 30 minutos.
 - Persistencia tras cerrar el navegador.
 - Modo físico offline/PWA.
@@ -67,6 +71,8 @@ Durante una fase de implementación aprobada:
 - Añadir estadísticas o historial.
 - Cambiar barajas, juegos o alcance del MVP.
 - Cambiar las políticas de reconexión.
+- Cambiar Supabase, el modelo de eventos, los checkpoints o las políticas RLS.
+- Ampliar el alcance inicial de Texas Hold'em con torneos, recompensas o variantes.
 - Introducir moneda, rankings, comercio o perfiles públicos.
 
 ## Convenciones futuras
