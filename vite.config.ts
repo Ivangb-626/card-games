@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-export default defineConfig({
-  base: '/card-games/',
+export default defineConfig(({ mode }) => ({
+  base: mode === 'pages' ? '/card-games/' : '/',
   plugins: [react()],
-})
+}))
