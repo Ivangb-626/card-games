@@ -2,7 +2,9 @@
 
 ## Estado de diseño
 
-Las decisiones siguientes son confirmadas por el producto. El framework, el backend, la base de datos, el sistema de tiempo real y el proveedor de alojamiento permanecen como propuestas hasta que se confirme una selección.
+Las reglas de producto están confirmadas. Para equilibrar rapidez de desarrollo, mantenimiento y coste, se propone como stack inicial React + TypeScript + Vite como PWA y Node.js + TypeScript con WebSockets y PostgreSQL para el backend. Se debe confirmar antes de implementar. El proveedor concreto de alojamiento, base de datos y tiempo real queda pendiente hasta una fase de preparación.
+
+Esta selección puede cambiar si las pruebas de proveedor, costes o conectividad muestran una incompatibilidad. No constituye una decisión de producto ni añade implementación.
 
 ## Componentes propuestos
 
@@ -36,12 +38,11 @@ Representa un palo, valor y metadatos visuales. Debe ser independiente del motor
 Define el conjunto de cartas, reverso, asignación de palos y reglas visuales. Debe soportar baraja española y americana sin mezclarlas en un único tipo.
 
 ### Jugador
-
-Representa una posición en la mesa y una identidad de sesión. Inicialmente podrá ser invitado; el login futuro no debe afectar directamente al motor de juego.
+Representa una posición en la mesa y una identidad local persistida. Inicialmente será invitado sin registro. El login futuro debe quedar detrás de una interfaz de identidad intercambiable para añadir amigos y perfiles sin alterar el motor.
 
 ### Sala
 
-Agrupa jugadores, configuración, estado de partida y política de acceso. Una sala privada debe rechazar participantes sin invitación.
+Agrupa jugadores, configuración, estado de partida y política de acceso. Una sala privada rechaza participantes sin código o enlace válido y expira a los 30 minutos. El creador recibe el rol de administrador.
 
 ### Partida
 
@@ -71,15 +72,13 @@ Las acciones rechazadas deben conservar el estado original y devolver una razón
 
 ## Deshacer
 
-La propuesta inicial es mantener un historial limitado de acciones dentro de la ronda:
+Se mantiene un historial de acciones dentro de la ronda:
 
-- Corregir solo acciones válidas de la misma ronda.
-- No deshacer acciones que hayan sido confirmadas como cierre de ronda si las reglas acordadas no lo permiten.
-- Mostrar quién realizó la corrección y qué cambió.
-- Restaurar el estado derivado completo, no solo una etiqueta visual.
-- Evitar deshacer turnos, puntos o cartas una vez finalizada la ronda, salvo una acción explícita de corrección definida.
-
-La política final será una decisión confirmada antes de implementar el motor.
+- Todas las acciones de una ronda pueden deshacerse mientras esta no haya sido confirmada.
+- Al confirmar la ronda, solo el creador/administrador puede deshacer cualquier acción posterior permitida por la política de cierre.
+- Un deshacer debe restaurar estado, turno, puntos y cartas derivadas.
+- Debe mostrar la acción revertida y conservar una trazabilidad técnica limitada a la sesión.
+- Las variantes configurables no pueden desactivar por código las reglas mínimas sin una configuración válida.
 
 ## Reconexión
 
@@ -87,10 +86,21 @@ El modelo mínimo debe distinguir:
 
 - Jugador desconectado.
 - Jugador reencontrado.
+- Jugador marcado como ausente.
 - Jugador eliminado o expulsado.
 - Sala expirada.
+- Si la desconexión ocurre fuera del turno o el usuario elige ese estado, se muestra como ausente.
+- Si el usuario pierde conexión durante su turno, queda documentado como caso operativo pendiente.
 
-Una reconexión debe recuperar el asiento, el turno correspondiente y el estado reciente. La selección de tolerancia de tiempo y caducidad requiere una decisión pendiente.
+Una reconexión válida recupera asiento, identidad local, puntos y estado para continuar desde la siguiente ronda. La sala expira a los 30 minutos.
+
+## Persistencia e invitaciones
+
+- La identidad temporal se mantiene en el dispositivo mediante almacenamiento local persistente.
+- El enlace puede contener o derivar un código corto de invitación.
+- El QR se considera mejora futura y no bloquea el MVP.
+- Persistir el estado necesario tras cerrar el navegador.
+- El modo físico debe conservar estado suficiente para continuar sin red. La sincronización con el modo digital no forma parte del primer hito.
 
 ## Seguridad mínima
 
@@ -120,8 +130,8 @@ La base debe permitir, sin reescribir el dominio:
 | Backend | Servidor autoritativo, servicios modulares o solución administrada | Pendiente |
 | Tiempo real | WebSockets, servicios administrados o sondeo | Pendiente |
 | Persistencia | Documento, relacional o almacenamiento administrado | Pendiente |
-| Invitación | Código, enlace, QR | Pendiente |
-| Identidad | Invitado temporal, identidad persistente o login | Pendiente |
+| Proveedor | Alojamiento administrado o propio | Pendiente |
+| Reenganche | Detalle de variantes y empates | Pendiente |
 
 ## Pruebas recomendadas
 

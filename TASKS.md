@@ -9,15 +9,19 @@
 
 ## Fase 0 — Decisiones
 
-- [ ] Definir el alcance de reglas de chinchón.
-- [ ] Definir el alcance de reglas de póker.
-- [ ] Elegir el mecanismo inicial de invitación.
-- [ ] Elegir el modelo de invitados.
-- [ ] Elegir el framework web.
-- [ ] Elegir backend, persistencia y tiempo real.
-- [ ] Definir límites de reconexión y caducidad de sala.
-- [ ] Definir acciones permitidas para deshacer por ronda.
+- [x] Confirmar el MVP: chinchón primero y Texas Hold'em como hito siguiente.
+- [x] Confirmar límites de jugadores, barajas y modos.
+- [x] Confirmar código corto, enlace compartible y QR futuro.
+- [x] Confirmar invitados temporales e identidad persistida localmente.
+- [x] Confirmar sala de 30 minutos y persistencia tras cerrar navegador.
+- [x] Confirmar deshacer por ronda y permisos del administrador.
+- [ ] Elegir proveedor concreto de alojamiento, persistencia y tiempo real.
+- [ ] Confirmar el stack propuesto y el proveedor concreto antes de crear dependencias.
+- [ ] Definir la conducta exacta durante pérdida de conexión en el turno.
+- [ ] Definir la política detallada de reenganche y variantes.
 - [ ] Confirmar pantallas mínimas y tamaños de soporte.
+
+**Dependencias:** las decisiones pendientes no bloquean el diseño visual; sí bloquean reconexión avanzada, variantes y persistencia automática.
 
 **Criterio de salida:** ninguna tarea de diseño o construcción importante tiene una dependencia crítica sin dueño o respuesta.
 
@@ -33,6 +37,9 @@
 - [ ] Añadir estados de carga, éxito y error.
 - [ ] Verificar móvil, tablet y escritorio.
 - [ ] Verificar teclado y contraste básico.
+- [ ] Preparar español e inglés.
+- [ ] Priorizar flujo funcional estable antes de animaciones avanzadas.
+- [ ] Crear estados de invitación, identidad temporal y sala ausente.
 
 **Criterio de salida:** los recorridos principales pueden navegarse sin backend y los componentes representan ambas barajas.
 
@@ -45,8 +52,11 @@
 - [ ] Registrar puntos por ronda.
 - [ ] Mostrar puntuación acumulada.
 - [ ] Permitir deshacer una acción válida dentro de la ronda.
+- [ ] Permitir deshacer todas las acciones válidas durante la ronda.
+- [ ] Restringir el deshacer posterior al cierre al creador/administrador.
 - [ ] Confirmar el cierre de ronda.
-- [ ] Recuperar estado local ante una recarga si se confirma su persistencia.
+- [ ] Recuperar estado local ante recarga y cierre del navegador.
+- [ ] Configurar PWA y validar operación offline del modo físico.
 
 **Criterio de salida:** una partida física ficticia puede completarse y corregirse sin reiniciar toda la ronda.
 
@@ -55,7 +65,9 @@
 - [ ] Crear entidades comunes de partida, ronda y turno.
 - [ ] Crear interfaz común de motor de juego.
 - [ ] Añadir reglas básicas acordadas de chinchón.
-- [ ] Añadir reglas básicas acordadas de póker.
+- [ ] Implementar el motor de chinchón como primer hito.
+- [ ] Preparar el motor extensible de Texas Hold'em.
+- [ ] Añadir Texas Hold'em completo como segundo hito digital.
 - [ ] Añadir casos de empates o cierre de ronda.
 - [ ] Prohibir acciones fuera de turno.
 - [ ] Añadir pruebas unitarias de reglas normales.
@@ -72,9 +84,13 @@
 - [ ] Sincronizar estado de la sala.
 - [ ] Sincronizar acciones y turnos.
 - [ ] Mostrar estado de conexión.
+- [ ] Mostrar jugadores como ausentes fuera del turno o por elección.
 - [ ] Permitir reincorporación al asiento.
 - [ ] Evitar duplicar jugadores al reconectar.
 - [ ] Persistir el estado mínimo necesario.
+- [ ] Recuperar puntos y estado para continuar desde la siguiente ronda.
+- [ ] Caducar salas a los 30 minutos.
+- [ ] Añadir español e inglés.
 
 **Criterio de salida:** dos clientes pueden unirse, jugar, desconectarse y reincorporarse sin perder el estado.
 
@@ -93,9 +109,8 @@
 
 ## Preguntas abiertas que bloquean inicio
 
-- ¿Qué reglas concretas entran en chinchón y póker para el MVP?
-- ¿Qué mecanismo de invitación es el más sencillo de entregar y mantener?
-- ¿Los invitados tienen identidad persistente o solo por sesión?
-- ¿Cuál será el stack elegido?
-- ¿Qué representa exactamente “deshacer” y hasta cuándo puede aplicarse?
-- ¿Qué sucede si un jugador desconectado no vuelve?
+- ¿Qué comportamiento exacto debe tener un jugador que pierde conexión durante su turno?
+- ¿Cómo se resuelve el reenganche en empates y variantes configurables?
+- ¿Qué proveedor concreto cumple mejor coste, latencia y facilidad de despliegue?
+- ¿Qué secuencia de confirmación debe aplicar el cierre de ronda cuando participa el administrador?
+- ¿Qué ocurre si una sala expira o un jugador ausente no vuelve?

@@ -5,9 +5,9 @@
 Objetivo: cerrar decisiones bloqueantes y dejar criterios implementables.
 
 - Revisar las decisiones confirmadas y separar las pendientes.
-- Definir el alcance exacto de chinchón y póker para el MVP.
-- Elegir el mecanismo de invitación inicial.
-- Elegir el stack y el proveedor de infraestructura.
+- Acordar variantes configurables y casos límite de chinchón.
+- Elegir proveedor concreto de alojamiento, persistencia y tiempo real.
+- Preparar el stack seleccionado: React, TypeScript, Vite/PWA y Node.js/TypeScript.
 - Definir reglas mínimas de sala, turno, ronda y desconexión.
 
 Resultado verificable: documentos técnicos aprobados y una lista corta de tareas de construcción.
@@ -24,7 +24,7 @@ Objetivo: validar navegación y componentes antes de integrar complejidad.
 
 Resultado verificable: flujos principales navegables en móvil y escritorio con datos de demostración.
 
-## Fase 2 — Modo físico
+## Fase 2 — Modo físico con chinchón
 
 Objetivo: ayudar a gestionar una partida real sin asumir que el usuario no puede actuar manualmente.
 
@@ -32,17 +32,23 @@ Objetivo: ayudar a gestionar una partida real sin asumir que el usuario no puede
 - Implementar asignación de turnos.
 - Implementar registro de puntos por ronda.
 - Añadir confirmación y deshacer por ronda.
+- Implementar cierre por combinación completa o máximo de 5 puntos.
+- Implementar bonificaciones y contabilización de puntos restantes.
+- Implementar fin de partida y reenganche a 100 puntos.
+- Guardar persistencia local de partida y jugador.
+- Preparar PWA para uso offline.
 - Mantener las reglas seleccionadas en una vista clara.
 
-Resultado verificable: completar varias rondas con persistencia local mínima y corregir una jugada incorrecta.
+Resultado verificable: completar varias rondas offline, corregir una jugada y aplicar cierres y bonificaciones configurables.
 
 ## Fase 3 — Motores de juego iniciales
 
-Objetivo: cubrir reglas básicas de chinchón y póker sin ampliación prematura.
+Objetivo: cubrir primero las reglas básicas de chinchón y preparar Texas Hold'em sin ampliar prematuramente las variantes.
 
 - Extraer modelos comunes de partida, ronda y turno.
-- Implementar chinchón según las reglas acordadas.
-- Implementar póker según las reglas acordadas.
+- Implementar y validar el motor de chinchón acordado.
+- Preparar el motor extensible de variantes.
+- Implementar Texas Hold'em como hito posterior dentro del mismo motor extensible.
 - Diferenciar claramente reglas confirmadas de extensiones futuras.
 
 Resultado verificable: pruebas de reglas para casos normales, empates y errores controlados.
