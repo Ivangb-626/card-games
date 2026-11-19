@@ -2,9 +2,14 @@
 
 ## Estado de diseño
 
-Las reglas de producto están confirmadas. Para equilibrar rapidez de desarrollo, mantenimiento y coste, se propone como stack inicial React + TypeScript + Vite como PWA y Node.js + TypeScript con WebSockets y PostgreSQL para el backend. Se debe confirmar antes de implementar. El proveedor concreto de alojamiento, base de datos y tiempo real queda pendiente hasta una fase de preparación.
+Las reglas de producto están confirmadas. Para equilibrar rapidez de desarrollo, mantenimiento y coste, la fundación visual usa React + TypeScript + Vite. Esta decisión cubre únicamente el frontend de la fase 1; la PWA completa, el backend Node.js, WebSockets, PostgreSQL y el proveedor concreto de alojamiento, base de datos y tiempo real quedan pendientes de una fase posterior.
 
-Esta selección puede cambiar si las pruebas de proveedor, costes o conectividad muestran una incompatibilidad. No constituye una decisión de producto ni añade implementación.
+Comandos de la fundación actual:
+
+- `npm install`: instala las dependencias del frontend.
+- `npm run check`: ejecuta el chequeo de tipos.
+- `npm run build`: genera la compilación de producción con Vite.
+- `npm run dev`: inicia el servidor local de revisión.
 
 ## Componentes propuestos
 
@@ -126,7 +131,7 @@ La base debe permitir, sin reescribir el dominio:
 
 | Decisión | Opciones posibles | Estado |
 |---|---|---|
-| Frontend | Framework SPA, SSR o híbrido | Pendiente |
+| Frontend | React + TypeScript + Vite para la fundación visual | Decidido para fase 1 |
 | Backend | Servidor autoritativo, servicios modulares o solución administrada | Pendiente |
 | Tiempo real | WebSockets, servicios administrados o sondeo | Pendiente |
 | Persistencia | Documento, relacional o almacenamiento administrado | Pendiente |
