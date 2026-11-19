@@ -26,15 +26,17 @@ El MVP se centra en experiencia de usuario, representación visual de cartas, ga
 | Bonificaciones | Chinchón natural: -50 puntos. Cierre quedándose con cero: -10 puntos. |
 | Puntuación | Se contabilizan los puntos de las cartas que quedan sin combinar. |
 | Fin de partida | Termina cuando, al cierre de una ronda, solo queda un jugador por debajo de 100 puntos. Al llegar a 100, un jugador puede reengancharse a la puntuación del jugador con más puntos. |
-| Póker | Texas Hold'em básico completo: ciegas, fichas virtuales, reparto automático, turnos, apuestas, all-in y resolución automática de manos; 2-9 jugadores. |
+| Póker | Texas Hold'em digital básico completo: ciegas, fichas virtuales, reparto automático, turnos, apuestas, all-in y resolución automática de manos; 2-9 jugadores. Torneos, recompensas y variantes quedan fuera del alcance inicial. |
 | Invitados | Nombre temporal sin registro obligatorio e identidad persistida localmente en el mismo dispositivo para reincorporarse. |
-| Invitaciones | Código corto y enlace compartible; QR queda como mejora futura. |
+| Invitaciones | Código corto y enlace compartible con validez de 24 horas; QR queda como mejora futura. |
 | Login futuro | Opcional, destinado a añadir amigos y perfiles. No será obligatorio. |
-| Continuidad | Desconexión marcada como ausente cuando se produzca fuera del turno o el usuario elija ese estado. Si pierde la conexión durante su turno, el comportamiento operativo concreto queda por precisar. |
+| Continuidad | Si un jugador no vuelve en 30 segundos, la partida queda pausada indefinidamente. El anfitrión puede jugar temporalmente por el jugador ausente o expulsarlo. El anfitrión no obtiene ventajas en las mecánicas. |
 | Expiración | La sala expira a los 30 minutos. |
 | Reconexión | Recupera asiento, puntos y estado suficiente para continuar desde la siguiente ronda. |
 | Correcciones | Todas las acciones pueden deshacerse dentro de una ronda. Al confirmar una ronda, solo el creador con rol de administrador puede deshacer. |
 | Persistencia | Mantener estado tras cerrar el navegador. |
+| Persistencia digital | Supabase Postgres como persistencia, Supabase Realtime para sincronizar salas y RLS para que cada jugador solo acceda a salas a las que pertenece. |
+| Historial técnico | Cada acción válida se guarda cronológicamente con jugador, tipo, datos, versión y fecha. Cada ronda conserva checkpoints para deshacer sin alterar el historial original. |
 | Datos históricos | Sin estadísticas ni historial de producto por ahora. |
 | Plataforma | Web responsive, con PWA para el modo físico sin red. |
 | Idiomas | Español e inglés inicialmente. |
@@ -47,9 +49,6 @@ El MVP se centra en experiencia de usuario, representación visual de cartas, ga
 
 Estas opciones no están decididas y deben resolverse antes de una implementación que dependa de ellas:
 
-- Selección de proveedor de tiempo real, persistencia y alojamiento.
-- Detalle operativo si el jugador pierde la conexión durante su turno.
-- Política exacta para ausencias prolongadas y toma de control.
 - Definición detallada del reenganche y su interacción con variantes de puntuación.
 - Secuencia exacta de cierre y confirmación de ronda.
 - Qué comprobaciones de integridad pueden abortar o recuperar una partida.

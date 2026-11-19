@@ -6,8 +6,7 @@ Objetivo: cerrar decisiones bloqueantes y dejar criterios implementables.
 
 - Revisar las decisiones confirmadas y separar las pendientes.
 - Acordar variantes configurables y casos límite de chinchón.
-- Elegir proveedor concreto de alojamiento, persistencia y tiempo real.
-- Preparar el stack seleccionado: React, TypeScript, Vite/PWA y Node.js/TypeScript.
+- Preparar el stack seleccionado: React, TypeScript, Vite/PWA y Supabase.
 - Definir reglas mínimas de sala, turno, ronda y desconexión.
 
 Resultado verificable: documentos técnicos aprobados y una lista corta de tareas de construcción.
@@ -48,7 +47,8 @@ Objetivo: cubrir primero las reglas básicas de chinchón y preparar Texas Hold'
 - Extraer modelos comunes de partida, ronda y turno.
 - Implementar y validar el motor de chinchón acordado.
 - Preparar el motor extensible de variantes.
-- Implementar Texas Hold'em como hito posterior dentro del mismo motor extensible.
+- Implementar Texas Hold'em digital básico completo como hito posterior dentro del mismo motor extensible: ciegas, fichas, apuestas, turnos, all-in y resolución automática.
+- Mantener fuera de alcance inicial torneos, recompensas y variantes de Texas Hold'em.
 - Diferenciar claramente reglas confirmadas de extensiones futuras.
 
 Resultado verificable: pruebas de reglas para casos normales, empates y errores controlados.
@@ -58,11 +58,13 @@ Resultado verificable: pruebas de reglas para casos normales, empates y errores 
 Objetivo: permitir sesiones privadas invitadas con continuidad.
 
 - Crear sala privada.
-- Implementar mecanismo de invitación elegido.
+- Implementar código corto y enlace compartible con validez de 24 horas.
 - Permitir unir invitados.
 - Sincronizar estado básico de mesa y turnos.
-- Gestionar desconexión y reincorporación.
+- Gestionar desconexión, pausa indefinida tras 30 segundos, control temporal del anfitrión y expulsión.
 - Impedir entradas no invitadas.
+- Persistir eventos y checkpoints en Supabase Postgres.
+- Sincronizar salas mediante Supabase Realtime y restringir acceso con RLS.
 
 Resultado verificable: dos o más jugadores pueden jugar y restaurar su asiento tras una desconexión.
 
@@ -87,4 +89,5 @@ Resultado verificable: recorrido completo sin datos de prueba ni errores visible
 - Perfiles públicos.
 - Motor de chat avanzado.
 - Compatibilidad avanzada con todos los juegos o barajas.
+- Torneos, recompensas y variantes de Texas Hold'em.
 - Integración definitiva de login hasta decidir su propósito.
