@@ -7,46 +7,53 @@ Crear una aplicación web de cartas que permita jugar tanto con cartas físicas 
 El MVP se centra en experiencia de usuario, representación visual de cartas, galería y mecánicas básicas. No pretende cubrir todavía estadísticas, historial competitivo ni una economía completa.
 
 ## Estado actual
-
-- El repositorio está vacío y no contiene una implementación ni documentación previa.
-- No se ha confirmado una tecnología, plataforma de servidor ni proveedor de infraestructura.
+- Existe únicamente documentación de planificación; no hay implementación de producto.
+- Ya existe una primera base de documentos, que se mantiene y amplía con las decisiones acordadas.
+- La tecnología se seleccionará durante la fase de preparación sin incorporar dependencias en esta etapa.
 - Esta documentación define el punto de partida funcional y técnico; no implementa la aplicación.
 
 ## Decisiones confirmadas
 
 | Área | Decisión |
 |---|---|
-| Producto | Aplicación de cartas con dos modos: ayuda para partidas físicas y partidas digitales privadas. |
-| Modalidad física | Debe cubrir reglas, turnos y puntos. |
-| Modalidad digital | Debe estar limitada por invitación. |
+| Producto | Aplicación de cartas con modo físico y modo digital privado por invitación. |
+| Nombre temporal | Card Games. El nombre definitivo queda pendiente. |
+| Modalidad física | Gestión manual de jugadores, turnos, rondas y puntuaciones; debe funcionar sin red mediante PWA. |
+| Modalidad digital | Chinchón será el primer hito y Texas Hold'em el siguiente hito digital. |
 | Barajas | Baraja española y baraja americana. |
-| Juegos iniciales | Chinchón y póker. |
-| Invitados | Se admitirán invitados. El propósito y alcance del login futuro aún no están definidos. |
-| Invitaciones | Se elegirá inicialmente el mecanismo más sencillo disponible. |
-| Continuidad | Deben soportarse desconexiones y reincorporaciones. |
-| Correcciones | Durante una ronda debe ser posible deshacer errores o misclicks. |
-| Datos históricos | Sin estadísticas ni historial por ahora. |
-| Plataforma | Recomendación inicial: interfaz web responsive. |
-| Alcance inicial | MVP centrado en UX, cartas, galería y mecánicas básicas. |
-| Estética | Moderna, inspirada en Balatro, Marvel Snap y Hearthstone, sin copiar sus identidades ni activos. |
+| Chinchón | 2-4 jugadores, 7 cartas por jugador y reglas configurables para admitir variantes. |
+| Cierre en chinchón | Cierre si todas las cartas están combinadas o quedan como máximo 5 puntos sin combinar. |
+| Bonificaciones | Chinchón natural: -50 puntos. Cierre quedándose con cero: -10 puntos. |
+| Puntuación | Se contabilizan los puntos de las cartas que quedan sin combinar. |
+| Fin de partida | Termina cuando, al cierre de una ronda, solo queda un jugador por debajo de 100 puntos. Al llegar a 100, un jugador puede reengancharse a la puntuación del jugador con más puntos. |
+| Póker | Texas Hold'em básico completo: ciegas, fichas virtuales, reparto automático, turnos, apuestas, all-in y resolución automática de manos; 2-9 jugadores. |
+| Invitados | Nombre temporal sin registro obligatorio e identidad persistida localmente en el mismo dispositivo para reincorporarse. |
+| Invitaciones | Código corto y enlace compartible; QR queda como mejora futura. |
+| Login futuro | Opcional, destinado a añadir amigos y perfiles. No será obligatorio. |
+| Continuidad | Desconexión marcada como ausente cuando se produzca fuera del turno o el usuario elija ese estado. Si pierde la conexión durante su turno, el comportamiento operativo concreto queda por precisar. |
+| Expiración | La sala expira a los 30 minutos. |
+| Reconexión | Recupera asiento, puntos y estado suficiente para continuar desde la siguiente ronda. |
+| Correcciones | Todas las acciones pueden deshacerse dentro de una ronda. Al confirmar una ronda, solo el creador con rol de administrador puede deshacer. |
+| Persistencia | Mantener estado tras cerrar el navegador. |
+| Datos históricos | Sin estadísticas ni historial de producto por ahora. |
+| Plataforma | Web responsive, con PWA para el modo físico sin red. |
+| Idiomas | Español e inglés inicialmente. |
+| Accesibilidad | Prácticas básicas desde el inicio: teclado, contraste y navegación clara. |
+| Alcance inicial | MVP centrado en una interfaz funcional y cuidada, cartas, galería y mecánicas básicas. |
+| Estética | Moderna, inspirada en Balatro, Marvel Snap y Hearthstone, sin copiar identidades, activos ni elementos reconocibles. |
 | Arquitectura | Base escalable desde el primer diseño. |
 
 ## Propuestas pendientes
 
 Estas opciones no están decididas y deben resolverse antes de una implementación que dependa de ellas:
 
-- Elección del framework web y del lenguaje de servidor.
 - Selección de proveedor de tiempo real, persistencia y alojamiento.
-- Modelo exacto de invitados: nombre temporal, duración de sesión o identidad persistente.
-- Propósito futuro del login: cuentas, identidad social, recuperación, moderación o perfiles.
-- Mecanismo de invitación inicial: código, enlace compartible, QR o combinación.
-- Número inicial de jugadores por juego y reglas específicas de mesa.
-- Reglas detalladas de chinchón y póker dentro del alcance del MVP.
-- Política de reconexión: tiempo de espera, caducidad de sala y condiciones de toma de control.
-- Alcance y confirmación del deshacer de misclicks por ronda.
-- Definición de “partida privada” y controles de acceso.
-- Soporte offline, PWA o solo navegador.
-- Estrategia de internacionalización, accesibilidad y idiomas.
+- Detalle operativo si el jugador pierde la conexión durante su turno.
+- Política exacta para ausencias prolongadas y toma de control.
+- Definición detallada del reenganche y su interacción con variantes de puntuación.
+- Secuencia exacta de cierre y confirmación de ronda.
+- Qué comprobaciones de integridad pueden abortar o recuperar una partida.
+- Estrategia de sincronización offline/online para el modo físico PWA.
 
 ## Principios de producto
 
@@ -68,3 +75,4 @@ Estas opciones no están decididas y deben resolverse antes de una implementaci�
 - Permitir correcciones controladas dentro de una ronda.
 - Usar una interfaz responsive usable en escritorio y móvil.
 - Mantener una arquitectura que permita incorporar después login, nuevos juegos y nuevas barajas.
+- Mantener el modo físico operativo sin red y el digital recuperable tras una desconexión.

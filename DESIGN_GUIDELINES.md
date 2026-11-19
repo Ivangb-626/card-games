@@ -4,6 +4,8 @@
 
 La interfaz debe sentirse moderna, expresiva y legible. La inspiración es conceptual y puede tomar referencias de energía visual, jerarquía y tactilidad de Balatro, Marvel Snap y Hearthstone, pero no debe copiar elementos identificables, nombres, ilustraciones, marcas ni activos.
 
+La prioridad inicial es una interfaz funcional bien diseñada. Las mejoras visuales avanzadas y las animaciones se añadirán después de que el flujo básico sea estable.
+
 ## Principios
 
 - Claridad antes que decoración.
@@ -59,6 +61,10 @@ Diseñar explícitamente:
 - Final de partida.
 - Error de invitación o acceso.
 - Reconexión.
+- Jugador ausente.
+- Sala próxima a expirar.
+- Identidad temporal y entrada por invitación.
+- Continuación offline en modo físico.
 
 ## Interacción
 
@@ -69,6 +75,9 @@ Diseñar explícitamente:
 - Proporcionar suficiente área táctil.
 - Mantener el foco visible en navegación por teclado.
 - Asociar errores con el campo o acción que los produjo.
+- Permitir deshacer dentro de la ronda sin reiniciar la partida.
+- Restringir la función posterior al cierre solo al creador/administrador.
+- Mostrar el estado de conexión y la ausencia sin representar al jugador como desconectado del juego.
 
 ## Color
 
@@ -101,6 +110,7 @@ Diseñar explícitamente:
 - Anuncios para cambios de turno y reconexiones.
 - Feedback visual además de sonido.
 - Contenido no dependiente de temporización visual cuando sea posible.
+- Textos disponibles inicialmente en español e inglés.
 
 ## Propuestas pendientes
 

@@ -28,15 +28,22 @@ Un agente no debe sustituir estas decisiones por suposiciones:
 
 - Modos físico y digital privado por invitación.
 - Barajas española y americana.
-- Chinchón y póker inicialmente.
-- Invitados admitidos.
-- Login futuro sin propósito definido todavía.
-- Invitación por el mecanismo más sencillo inicialmente.
+- Chinchón primero y Texas Hold'em como siguiente hito digital.
+- Chinchón para 2-4 jugadores y 7 cartas por jugador.
+- Póker Texas Hold'em para 2-9 jugadores.
+- Invitados admitidos con nombre temporal e identidad local persistente.
+- Login opcional futuro para amigos y perfiles.
+- Código corto y enlace compartible; QR futuro.
 - Desconexión y reincorporación.
-- Deshacer errores o misclicks por ronda.
+- Deshacer todas las acciones dentro de la ronda; solo el creador/admin puede deshacer tras confirmar el cierre.
+- Sala expirada a los 30 minutos.
+- Persistencia tras cerrar el navegador.
+- Modo físico offline/PWA.
 - Sin estadísticas ni historial por ahora.
-- Web responsive como recomendación inicial.
-- MVP centrado en UX, cartas, galería y mecánicas básicas.
+- Web responsive con español e inglés.
+- MVP funcional básico primero y mejoras visuales después.
+- Accesibilidad básica desde el inicio.
+- Nombre temporal Card Games.
 - Estética inspirada en referencias, pero sin copia.
 - Arquitectura escalable.
 
@@ -52,8 +59,9 @@ Durante una fase de implementación aprobada:
 
 ## Trabajo que requiere autorización
 
-- Cambiar stack, backend o proveedor.
-- Cambiar reglas de chinchón o póker.
+- Cambiar el stack propuesto después de confirmarlo.
+- Cambiar backend o proveedor concretado.
+- Cambiar las reglas confirmadas de chinchón o Texas Hold'em.
 - Cambiar el mecanismo de invitación.
 - Añadir login o definir su propósito.
 - Añadir estadísticas o historial.
