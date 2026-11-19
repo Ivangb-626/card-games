@@ -11,6 +11,14 @@ Comandos de la fundación actual:
 - `npm run build`: genera la compilación de producción con Vite.
 - `npm run dev`: inicia el servidor local de revisión.
 
+### Publicación en GitHub Pages
+
+El frontend se publica como sitio estático en `https://ivangb-626.github.io/card-games/`. La configuración de Vite usa `base: '/card-games/'` para que los recursos generados apunten al subdirectorio correcto del proyecto.
+
+El workflow `.github/workflows/deploy-pages.yml` instala las dependencias, ejecuta el chequeo de tipos, genera `dist/` y publica el artefacto mediante GitHub Pages. Se ejecuta al hacer push a `main` y también puede iniciarse manualmente desde Actions.
+
+La navegación actual cambia estado dentro de una sola página y no usa rutas profundas. Por este motivo, no es necesario añadir una página `404.html` ni compatibilidad con rutas SPA en esta fase.
+
 ## Componentes propuestos
 
 El diseño inicial se organiza alrededor de estas responsabilidades:
