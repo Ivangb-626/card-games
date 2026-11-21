@@ -5,7 +5,7 @@ import { adjustPlayerScore, createPhysicalGame, PhysicalGame, SetupError } from 
 import { loadPhysicalGame, savePhysicalGame } from './infrastructure/storage/physicalGameStorage'
 
 type Language = 'es' | 'en'
-type View = 'home' | 'physical' | 'digital' | 'gallery'
+type View = 'home' | 'physical-games' | 'physical' | 'digital-games' | 'digital' | 'gallery'
 
 const copy = {
   es: {
@@ -47,6 +47,17 @@ const copy = {
     filterLabel: 'Filtrar baraja',
     modesLabel: 'Modos disponibles',
     heroCardsLabel: 'Cartas de demostración',
+    gameSelectionTitle: 'Elige un juego',
+    gameSelectionPhysicalIntro: 'Selecciona el juego que quieres gestionar en una partida física.',
+    gameSelectionDigitalIntro: 'Selecciona el juego con el que quieres preparar una partida digital.',
+    chinchonText: 'Marcador físico para partidas de 2 a 4 jugadores.',
+    chinchonDigitalText: 'Demostración de partida digital privada.',
+    selectGame: 'Seleccionar',
+    chinchonDigitalTitle: 'Chinchón digital',
+    chinchonDigitalIntro: 'La navegación está lista. Las reglas y las salas privadas se incorporarán en una fase posterior.',
+    notAvailableYet: 'Funcionalidad en preparación',
+    backToMode: 'Volver a selección',
+    playerRange: '2–4 jugadores',
     cups: 'Copas',
     spades: 'Espadas',
     setupTitle: 'Configura la partida',
@@ -111,6 +122,17 @@ const copy = {
     filterLabel: 'Filter deck',
     modesLabel: 'Available modes',
     heroCardsLabel: 'Demo cards',
+    gameSelectionTitle: 'Choose a game',
+    gameSelectionPhysicalIntro: 'Choose the game you want to manage for an in-person match.',
+    gameSelectionDigitalIntro: 'Choose the game you want to use for a private digital match.',
+    chinchonText: 'Physical scorekeeper for 2 to 4 players.',
+    chinchonDigitalText: 'Private digital match demonstration.',
+    selectGame: 'Select',
+    chinchonDigitalTitle: 'Digital Chinchón',
+    chinchonDigitalIntro: 'The navigation is ready. Rules and private rooms will be added in a later phase.',
+    notAvailableYet: 'Feature in preparation',
+    backToMode: 'Back to game selection',
+    playerRange: '2–4 players',
     cups: 'Cups',
     spades: 'Spades',
     setupTitle: 'Set up the game',
@@ -302,13 +324,18 @@ function App() {
         </button>
         <nav className="main-nav" aria-label={t.navLabel}>
           {t.nav.map((label, index) => {
-            const target = ['home', 'physical', 'digital', 'gallery'][index] as View
+            const target = ['home', 'physical-games', 'digital-games', 'gallery'][index] as View
+            const active = target === 'physical-games'
+              ? view === 'physical-games' || view === 'physical'
+              : target === 'digital-games'
+                ? view === 'digital-games' || view === 'digital'
+                : view === target
             return (
               <button
-                className={view === target ? 'nav-link active' : 'nav-link'}
+                className={active ? 'nav-link active' : 'nav-link'}
                 key={label}
                 onClick={() => navigate(target)}
-                aria-current={view === target ? 'page' : undefined}
+                aria-current={active ? 'page' : undefined}
               >
                 {label}
               </button>
@@ -335,7 +362,7 @@ function App() {
                 <p className="hero-intro">{t.intro}</p>
                 <div className="hero-actions">
                   <button className="button primary" onClick={() => navigate('gallery')}>{t.primary}<span aria-hidden="true">↗</span></button>
-                  <button className="button secondary" onClick={() => navigate('physical')}>{t.secondary}</button>
+                  <button className="button secondary" onClick={() => navigate('physical-games')}>{t.secondary}</button>
                 </div>
                 <div className="hero-note">
                   <span className="note-icon" aria-hidden="true">⌁</span>
@@ -352,11 +379,11 @@ function App() {
             </section>
 
             <section className="mode-grid" aria-label={t.modesLabel}>
-              <button className="mode-card physical-mode" onClick={() => navigate('physical')}>
+              <button className="mode-card physical-mode" onClick={() => navigate('physical-games')}>
                 <div className="mode-icon">♧</div>
                 <div><p className="eyebrow">01 · {t.physical}</p><h2>{t.physical}</h2><p>{t.physicalText}</p></div><span className="arrow" aria-hidden="true">↗</span>
               </button>
-              <button className="mode-card digital-mode" onClick={() => navigate('digital')}>
+              <button className="mode-card digital-mode" onClick={() => navigate('digital-games')}>
                 <div className="mode-icon">◈</div>
                 <div><p className="eyebrow">02 · {t.digital}</p><h2>{t.digital}</h2><p>{t.digitalText}</p></div><span className="arrow" aria-hidden="true">↗</span>
               </button>
@@ -379,7 +406,10 @@ function App() {
 
         {view !== 'home' && (
           <section className="subpage">
-            <button className="back-link" onClick={() => navigate('home')}>← {t.back}</button>
+            <button
+              className="back-link"
+              onClick={() => navigate(view === 'physical-games' || view === 'digital-games' ? 'home' : view === 'physical' ? 'physical-games' : view === 'digital' ? 'digital-games' : 'home')}
+            >← {view === 'physical-games' || view === 'digital-games' ? t.back : t.backToMode}</button>
             {view === 'gallery' ? (
               <>
                 <div className="subpage-heading"><p className="eyebrow">{t.demo}</p><h1>{t.gallery}</h1><p>{t.demoText}</p></div>
@@ -387,6 +417,46 @@ function App() {
                   {(['all', 'spanish', 'american'] as const).map((option) => <button key={option} className={deck === option ? 'filter active' : 'filter'} onClick={() => setDeck(option)} aria-pressed={deck === option}>{option === 'all' ? t.all : option === 'spanish' ? t.spanish : t.american}</button>)}
                 </div>
                 <div className="gallery-grid">{cards.map((card) => <Card key={card.id} card={card} label={cardLabels[language][card.label] ?? card.label} suit={suitLabels[language][card.suit] ?? card.suit} />)}</div>
+              </>
+            ) : view === 'physical-games' ? (
+              <>
+                <div className="subpage-heading">
+                  <p className="eyebrow">01 · {t.physical}</p>
+                  <h1>{t.gameSelectionTitle}</h1>
+                  <p>{t.gameSelectionPhysicalIntro}</p>
+                </div>
+                <div className="game-selection-grid">
+                  <button className="game-selection-card" type="button" onClick={() => navigate('physical')}>
+                    <span className="game-selection-icon" aria-hidden="true">♧</span>
+                    <span className="game-selection-copy">
+                      <span className="eyebrow">{t.playerRange}</span>
+                      <strong>Chinchón</strong>
+                      <span>{t.chinchonText}</span>
+                    </span>
+                    <span className="arrow" aria-hidden="true">↗</span>
+                    <span className="game-selection-action">{t.selectGame}</span>
+                  </button>
+                </div>
+              </>
+            ) : view === 'digital-games' ? (
+              <>
+                <div className="subpage-heading">
+                  <p className="eyebrow">02 · {t.digital}</p>
+                  <h1>{t.gameSelectionTitle}</h1>
+                  <p>{t.gameSelectionDigitalIntro}</p>
+                </div>
+                <div className="game-selection-grid">
+                  <button className="game-selection-card digital-game-card" type="button" onClick={() => navigate('digital')}>
+                    <span className="game-selection-icon" aria-hidden="true">◈</span>
+                    <span className="game-selection-copy">
+                      <span className="eyebrow">{t.playerRange}</span>
+                      <strong>Chinchón</strong>
+                      <span>{t.chinchonDigitalText}</span>
+                    </span>
+                    <span className="arrow" aria-hidden="true">↗</span>
+                    <span className="game-selection-action">{t.selectGame}</span>
+                  </button>
+                </div>
               </>
             ) : view === 'physical' ? (
                 <div className={physicalGame ? 'physical-panel scorekeeper-panel' : 'physical-panel'}>
@@ -472,9 +542,9 @@ function App() {
                 </div>
               ) : (
                 <div className="demo-panel">
-                  <p className="eyebrow">02 · {t.digital}</p>
-                  <h1>{t.digital}</h1>
-                  <p>{t.digitalText}</p>
+                  <p className="eyebrow">02 · {t.digital} · Chinchón</p>
+                  <h1>{t.chinchonDigitalTitle}</h1>
+                  <p>{t.chinchonDigitalIntro}</p>
                   <div className="demo-checks">
                     <div><span className="check" aria-hidden="true">✓</span><span>{t.lobby}</span><strong>{t.ready}</strong></div>
                     <div><span className="check" aria-hidden="true">✓</span><span>{t.turn}</span><strong>{t.demoValue}</strong></div>
