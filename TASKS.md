@@ -48,22 +48,14 @@
 ## Fase 2 — Modo físico
 
 - [x] Crear configuración y validación de 2–4 jugadores para Chinchón físico.
-- [ ] Crear selección de baraja y juego.
-- [x] Crear asignación inicial de turnos.
-- [ ] Permitir avanzar y retroceder turno según las reglas confirmadas.
-- [x] Permitir deshacer un avance de turno dentro de la ronda.
-- [x] Capturar borradores de puntos por jugador sin aplicarlos a los totales antes del cierre.
-- [ ] Registrar puntos por ronda.
-- [ ] Mostrar puntuación acumulada.
-- [ ] Permitir deshacer una acción válida dentro de la ronda.
-- [ ] Permitir deshacer todas las acciones válidas durante la ronda.
-- [ ] Restringir el deshacer posterior al cierre al creador/administrador.
-- [ ] Guardar eventos cronológicos y checkpoints de cada ronda sin mutar el historial.
-- [ ] Confirmar el cierre de ronda.
-- [ ] Recuperar estado local ante recarga y cierre del navegador.
+- [x] Mostrar un contador individual por jugador.
+- [x] Permitir sumar o restar un punto a cualquier contador en cualquier momento.
+- [x] Guardar y recuperar los contadores en el almacenamiento local.
+- [x] Migrar puntuaciones guardadas anteriormente al marcador simple.
+- [ ] Verificar el marcador en móvil desde 320 px, teclado y lector de pantalla.
 - [ ] Configurar PWA y validar operación offline del modo físico.
 
-**Criterio de salida:** una partida física ficticia puede completarse y corregirse sin reiniciar toda la ronda.
+**Criterio de salida:** una partida física permite gestionar jugadores y corregir sus puntuaciones directamente, sin turnos ni flujo de rondas.
 
 ## Fase 3 — Motores de juego
 
@@ -122,4 +114,4 @@
 ## Preguntas abiertas que bloquean inicio
 
 - ¿Cómo se resuelve el reenganche en empates y variantes configurables?
-- ¿Qué secuencia de confirmación debe aplicar el cierre de ronda cuando participa el administrador?
+- ¿Cómo se aplica el permiso de administrador para deshacer acciones después de confirmar el cierre en el modo físico?

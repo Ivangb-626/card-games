@@ -8,7 +8,7 @@ El MVP se centra en experiencia de usuario, representación visual de cartas, ga
 
 ## Estado actual
 - La aplicación usa React, TypeScript y Vite; incluye navegación SPA y una galería visual de cartas españolas y americanas.
-- El modo físico permite configurar 2–4 jugadores de Chinchón, avanzar y deshacer turnos, y guardar borradores de puntos por ronda; guarda y recupera la mesa en el almacenamiento local. Los borradores no se suman al total hasta confirmar el cierre, cuya secuencia sigue pendiente.
+- El modo físico de Chinchón se centra en llevar el marcador: permite configurar 2–4 jugadores y subir o bajar la puntuación individual en cualquier momento. No muestra turnos ni rondas y guarda los contadores en el dispositivo.
 - El modo digital sigue siendo una demostración. No hay motores completos de reglas, persistencia local, PWA, autenticación ni conexión de Supabase en el código.
 - Las decisiones de producto y arquitectura continúan documentadas aquí y en `ROADMAP.md`, `TECHNICAL_DESIGN.md`, `DESIGN_GUIDELINES.md` y `TASKS.md`.
 
@@ -18,7 +18,7 @@ El MVP se centra en experiencia de usuario, representación visual de cartas, ga
 |---|---|
 | Producto | Aplicación de cartas con modo físico y modo digital privado por invitación. |
 | Nombre temporal | Card Games. El nombre definitivo queda pendiente. |
-| Modalidad física | Gestión manual de jugadores, turnos, rondas y puntuaciones; debe funcionar sin red mediante PWA. |
+| Modalidad física | Marcador manual de Chinchón para 2–4 jugadores, con contadores individuales ajustables en cualquier momento; debe funcionar sin red mediante PWA. |
 | Modalidad digital | Chinchón será el primer hito y Texas Hold'em el siguiente hito digital. |
 | Barajas | Baraja española y baraja americana. |
 | Chinchón | 2-4 jugadores, 7 cartas por jugador y reglas configurables para admitir variantes. |
@@ -50,7 +50,6 @@ El MVP se centra en experiencia de usuario, representación visual de cartas, ga
 Estas opciones no están decididas y deben resolverse antes de una implementación que dependa de ellas:
 
 - Definición detallada del reenganche y su interacción con variantes de puntuación.
-- Secuencia exacta de cierre y confirmación de ronda.
 - Qué comprobaciones de integridad pueden abortar o recuperar una partida.
 - Estrategia de sincronización offline/online para el modo físico PWA.
 

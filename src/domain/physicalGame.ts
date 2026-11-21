@@ -5,11 +5,7 @@ export type PhysicalPlayer = {
 
 export type PhysicalGame = {
   players: PhysicalPlayer[]
-  activePlayerIndex: number
-  round: number
-  turnHistory: number[]
   scores: Record<string, number>
-  pendingRoundScores: Record<string, number | null>
 }
 
 export type SetupError = 'player-count' | 'empty-name' | 'duplicate-name'
@@ -18,13 +14,9 @@ export type SetupResult =
   | { ok: true; game: PhysicalGame }
   | { ok: false; error: SetupError }
 
-export type UndoTurnResult =
+export type ScoreAdjustmentResult =
   | { ok: true; game: PhysicalGame }
-  | { ok: false; error: 'nothing-to-undo' }
-
-export type PendingScoreResult =
-  | { ok: true; game: PhysicalGame }
-  | { ok: false; error: 'player-not-found' | 'invalid-score' }
+  | { ok: false; error: 'player-not-found' | 'invalid-adjustment' }
 
 export function createPhysicalGame(names: string[]): SetupResult {
   if (names.length < 2 || names.length > 4) return { ok: false, error: 'player-count' }
@@ -35,49 +27,28 @@ export function createPhysicalGame(names: string[]): SetupResult {
   const normalizedNames = cleanedNames.map((name) => name.toLocaleLowerCase())
   if (new Set(normalizedNames).size !== cleanedNames.length) return { ok: false, error: 'duplicate-name' }
 
+  const players = cleanedNames.map((name, index) => ({ id: `player-${index + 1}`, name }))
   return {
     ok: true,
     game: {
-      players: cleanedNames.map((name, index) => ({ id: `player-${index + 1}`, name })),
-      activePlayerIndex: 0,
-      round: 1,
-      turnHistory: [],
-      scores: Object.fromEntries(cleanedNames.map((_, index) => [`player-${index + 1}`, 0])),
-      pendingRoundScores: Object.fromEntries(cleanedNames.map((_, index) => [`player-${index + 1}`, null])),
+      players,
+      scores: Object.fromEntries(players.map((player) => [player.id, 0])),
     },
   }
 }
 
-export function advancePhysicalTurn(game: PhysicalGame): PhysicalGame {
-  return {
-    ...game,
-    activePlayerIndex: (game.activePlayerIndex + 1) % game.players.length,
-    turnHistory: [...game.turnHistory, game.activePlayerIndex],
-  }
-}
-
-export function undoPhysicalTurn(game: PhysicalGame): UndoTurnResult {
-  if (game.turnHistory.length === 0) return { ok: false, error: 'nothing-to-undo' }
-
-  return {
-    ok: true,
-    game: {
-      ...game,
-      activePlayerIndex: game.turnHistory[game.turnHistory.length - 1],
-      turnHistory: game.turnHistory.slice(0, -1),
-    },
-  }
-}
-
-export function setPendingRoundScore(game: PhysicalGame, playerId: string, score: number | null): PendingScoreResult {
+export function adjustPlayerScore(game: PhysicalGame, playerId: string, amount: number): ScoreAdjustmentResult {
   if (!game.players.some((player) => player.id === playerId)) return { ok: false, error: 'player-not-found' }
-  if (score !== null && !Number.isInteger(score)) return { ok: false, error: 'invalid-score' }
+  if (!Number.isSafeInteger(amount) || amount === 0) return { ok: false, error: 'invalid-adjustment' }
+
+  const updatedScore = game.scores[playerId] + amount
+  if (!Number.isSafeInteger(updatedScore)) return { ok: false, error: 'invalid-adjustment' }
 
   return {
     ok: true,
     game: {
       ...game,
-      pendingRoundScores: { ...game.pendingRoundScores, [playerId]: score },
+      scores: { ...game.scores, [playerId]: updatedScore },
     },
   }
 }
