@@ -1,13 +1,13 @@
 import { PhysicalGame } from '../../domain/physicalGame'
 
 const STORAGE_KEY = 'card-games:physical-game'
-const STORAGE_VERSION = 3
+const STORAGE_VERSION = 5
 
 export type PhysicalGameLoadResult =
   | { ok: true; game: PhysicalGame | null }
   | { ok: false; error: 'unavailable' | 'invalid-data' }
 
-type PhysicalGameIdentity = Omit<PhysicalGame, 'turnHistory' | 'scores' | 'pendingRoundScores'>
+type PhysicalGameIdentity = Omit<PhysicalGame, 'turnHistory' | 'scores' | 'roundScores' | 'pendingRoundScores' | 'actionHistory'>
 
 function isPhysicalGameBase(value: unknown): value is PhysicalGameIdentity {
   if (!value || typeof value !== 'object') return false
@@ -34,24 +34,68 @@ function hasValidTurnHistory(value: unknown): value is PhysicalGameIdentity & { 
     && turnHistory.every((index) => Number.isInteger(index) && index >= 0 && index < value.players.length)
 }
 
-function hasValidScoreState(value: unknown): value is PhysicalGame {
+function hasValidScoreState(value: unknown, hasRoundScores: boolean): value is PhysicalGame {
   if (!hasValidTurnHistory(value)) return false
-  const game = value as Pick<PhysicalGame, 'players' | 'turnHistory'> & Partial<Pick<PhysicalGame, 'scores' | 'pendingRoundScores'>>
+  const game = value as Pick<PhysicalGame, 'players' | 'turnHistory'> & Partial<Pick<PhysicalGame, 'scores' | 'roundScores' | 'pendingRoundScores'>>
   if (!game.scores || typeof game.scores !== 'object' || !game.pendingRoundScores || typeof game.pendingRoundScores !== 'object') return false
 
-  return game.players.every((player) =>
+  const validScores = game.players.every((player) =>
     Number.isInteger(game.scores?.[player.id])
     && (game.pendingRoundScores?.[player.id] === null || Number.isInteger(game.pendingRoundScores?.[player.id])),
   )
+  if (!validScores) return false
+  if (!hasRoundScores) return true
+  if (!Array.isArray(game.roundScores) || game.roundScores.length !== (value as PhysicalGame).round - 1) return false
+
+  return game.roundScores.every((roundScores) =>
+    Boolean(roundScores)
+    && typeof roundScores === 'object'
+    && game.players.every((player) => Number.isInteger(roundScores[player.id]))
+    && Object.keys(roundScores).length === game.players.length,
+  )
+}
+
+function hasValidActionHistory(value: unknown): value is PhysicalGame {
+  if (!hasValidScoreState(value, true)) return false
+  const game = value as PhysicalGame
+  return Array.isArray(game.actionHistory) && game.actionHistory.every((snapshot) =>
+    Boolean(snapshot)
+    && typeof snapshot.actionKey === 'string'
+    && (snapshot.actionKey === 'turn' || game.players.some((player) => snapshot.actionKey === `score:${player.id}`))
+    && Number.isInteger(snapshot.activePlayerIndex)
+    && snapshot.activePlayerIndex >= 0
+    && snapshot.activePlayerIndex < game.players.length
+    && Array.isArray(snapshot.turnHistory)
+    && snapshot.turnHistory.every((index) => Number.isInteger(index) && index >= 0 && index < game.players.length)
+    && snapshot.pendingRoundScores
+    && typeof snapshot.pendingRoundScores === 'object'
+    && Object.keys(snapshot.pendingRoundScores).length === game.players.length
+    && game.players.every((player) =>
+      snapshot.pendingRoundScores[player.id] === null
+      || Number.isInteger(snapshot.pendingRoundScores[player.id]),
+    ),
+  )
+}
+
+function createActionHistoryFromTurns(game: Pick<PhysicalGame, 'players' | 'turnHistory' | 'pendingRoundScores'>): PhysicalGame['actionHistory'] {
+  return game.turnHistory.map((activePlayerIndex, index) => ({
+    actionKey: 'turn',
+    activePlayerIndex,
+    turnHistory: game.turnHistory.slice(0, index),
+    pendingRoundScores: { ...game.pendingRoundScores },
+  }))
 }
 
 function createEmptyScoreState(game: PhysicalGameIdentity, turnHistory: number[] = []): PhysicalGame {
-  return {
+  const scoreState = {
     ...game,
     turnHistory,
     scores: Object.fromEntries(game.players.map((player) => [player.id, 0])),
+    roundScores: [],
     pendingRoundScores: Object.fromEntries(game.players.map((player) => [player.id, null])),
+    actionHistory: [],
   }
+  return { ...scoreState, actionHistory: createActionHistoryFromTurns(scoreState) }
 }
 
 export function loadPhysicalGame(): PhysicalGameLoadResult {
@@ -79,7 +123,14 @@ export function loadPhysicalGame(): PhysicalGameLoadResult {
   if (record.version === 2 && hasValidTurnHistory(record.game)) {
     return { ok: true, game: createEmptyScoreState(record.game, record.game.turnHistory) }
   }
-  if (record.version === STORAGE_VERSION && hasValidScoreState(record.game)) {
+  if (record.version === 3 && hasValidScoreState(record.game, false)) {
+    const game = { ...record.game, roundScores: [] }
+    return { ok: true, game: { ...game, actionHistory: createActionHistoryFromTurns(game) } }
+  }
+  if (record.version === 4 && hasValidScoreState(record.game, true)) {
+    return { ok: true, game: { ...record.game, actionHistory: createActionHistoryFromTurns(record.game) } }
+  }
+  if (record.version === STORAGE_VERSION && hasValidActionHistory(record.game)) {
     return { ok: true, game: record.game }
   }
   return { ok: false, error: 'invalid-data' }

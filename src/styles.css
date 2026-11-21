@@ -149,7 +149,17 @@ h1 { max-width: 620px; margin-bottom: 24px; font-size: clamp(42px, 5.2vw, 78px);
 .round-entry-row input:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }
 .round-entry-row input[aria-invalid="true"] { border-color: var(--coral); }
 .round-entry .score-note { margin-bottom: 0; }
+.round-history { margin: 24px 0 0; padding: 16px 18px; background: rgba(16,19,29,.35); border: 1px solid var(--line); border-radius: 8px; }
+.round-history h2 { margin: 0 0 12px; font-size: 15px; }
+.round-history-list { display: grid; gap: 8px; }
+.round-history-row { display: flex; flex-wrap: wrap; gap: 8px 16px; padding: 8px 0; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+.round-history-row strong { color: var(--ink); }
+.round-review .score-note { margin: 0 0 14px; }
+.round-review-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.round-review-row strong { color: var(--yellow); font: 600 15px 'DM Mono', monospace; }
+.round-review-row small { color: var(--muted); font: 11px 'DM Mono', monospace; }
 .turn-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.undo-confirm-text { flex: 1 1 100%; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .undo-note { margin: 10px 0 0; color: var(--muted); font-size: 11px; }
 .demo-checks { margin: 32px 0; border-top: 1px solid var(--line); }
 .demo-checks > div { display: flex; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--line); font-size: 13px; }

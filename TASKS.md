@@ -53,13 +53,13 @@
 - [ ] Permitir avanzar y retroceder turno según las reglas confirmadas.
 - [x] Permitir deshacer un avance de turno dentro de la ronda.
 - [x] Capturar borradores de puntos por jugador sin aplicarlos a los totales antes del cierre.
-- [ ] Registrar puntos por ronda.
-- [ ] Mostrar puntuación acumulada.
-- [ ] Permitir deshacer una acción válida dentro de la ronda.
-- [ ] Permitir deshacer todas las acciones válidas durante la ronda.
+- [x] Registrar puntos por ronda.
+- [x] Mostrar puntuación acumulada.
+- [x] Permitir deshacer una acción válida dentro de la ronda.
+- [x] Permitir deshacer todas las acciones válidas durante la ronda.
 - [ ] Restringir el deshacer posterior al cierre al creador/administrador.
 - [ ] Guardar eventos cronológicos y checkpoints de cada ronda sin mutar el historial.
-- [ ] Confirmar el cierre de ronda.
+- [x] Revisar y confirmar el cierre de ronda, aplicando los puntos al acumulado.
 - [ ] Recuperar estado local ante recarga y cierre del navegador.
 - [ ] Configurar PWA y validar operación offline del modo físico.
 
@@ -122,4 +122,4 @@
 ## Preguntas abiertas que bloquean inicio
 
 - ¿Cómo se resuelve el reenganche en empates y variantes configurables?
-- ¿Qué secuencia de confirmación debe aplicar el cierre de ronda cuando participa el administrador?
+- ¿Cómo se aplica el permiso de administrador para deshacer acciones después de confirmar el cierre en el modo físico?

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { americanCards, DemoCard, DeckKind, spanishCards } from './cards'
-import { advancePhysicalTurn, createPhysicalGame, PhysicalGame, SetupError, setPendingRoundScore, undoPhysicalTurn } from './domain/physicalGame'
+import { advancePhysicalTurn, confirmPhysicalRound, createPhysicalGame, PhysicalGame, SetupError, setPendingRoundScore, undoAllPhysicalActions, undoPhysicalAction, validatePendingRoundScores } from './domain/physicalGame'
 import { loadPhysicalGame, savePhysicalGame } from './infrastructure/storage/physicalGameStorage'
 
 type Language = 'es' | 'en'
@@ -62,12 +62,23 @@ const copy = {
     roundLabel: 'Ronda',
     activeTurn: 'Turno de',
     nextTurn: 'Siguiente turno',
-    undoTurn: 'Deshacer turno',
-    noUndo: 'No hay turnos que deshacer.',
+    undoAction: 'Deshacer última acción',
+    undoAllActions: 'Deshacer toda la ronda',
+    confirmUndoAll: 'Esto revertirá los turnos y borradores de puntuación de la ronda actual. ¿Quieres continuar?',
+    confirmUndoAllButton: 'Sí, deshacer la ronda',
+    cancelUndoAll: 'Cancelar',
+    noUndo: 'No hay acciones que deshacer.',
     activePlayer: 'Turno actual',
     scoresTitle: 'Puntuación acumulada',
     roundEntryTitle: 'Puntos de esta ronda',
     roundEntryNote: 'El borrador se guarda en este dispositivo y no se suma al total hasta confirmar el cierre de ronda.',
+    roundReviewTitle: 'Revisar cierre de ronda',
+    roundReviewNote: 'Comprueba los puntos antes de confirmarlos. Al confirmar, se sumarán al acumulado y comenzará la siguiente ronda.',
+    reviewRound: 'Revisar ronda',
+    editRound: 'Volver a editar',
+    confirmRound: 'Confirmar cierre',
+    roundHistoryTitle: 'Puntos por ronda',
+    missingRoundScores: 'Introduce un número entero para cada jugador antes de revisar el cierre.',
     invalidScore: 'Introduce un número entero de puntos.',
     missingScorePlayer: 'No se encontró ese jugador en la partida.',
     storageLoading: 'Recuperando la partida guardada…',
@@ -132,12 +143,23 @@ const copy = {
     roundLabel: 'Round',
     activeTurn: 'Turn for',
     nextTurn: 'Next turn',
-    undoTurn: 'Undo turn',
-    noUndo: 'There are no turns to undo.',
+    undoAction: 'Undo last action',
+    undoAllActions: 'Undo entire round',
+    confirmUndoAll: 'This will undo turns and score drafts from the current round. Continue?',
+    confirmUndoAllButton: 'Yes, undo the round',
+    cancelUndoAll: 'Cancel',
+    noUndo: 'There are no actions to undo.',
     activePlayer: 'Current turn',
     scoresTitle: 'Running score',
     roundEntryTitle: 'Scores for this round',
     roundEntryNote: 'This draft is saved on this device and will not affect totals until the round is confirmed.',
+    roundReviewTitle: 'Review round close',
+    roundReviewNote: 'Check the scores before confirming. Once confirmed, they will be added to the running totals and the next round will begin.',
+    reviewRound: 'Review round',
+    editRound: 'Back to editing',
+    confirmRound: 'Confirm close',
+    roundHistoryTitle: 'Scores by round',
+    missingRoundScores: 'Enter a whole number for every player before reviewing the round close.',
     invalidScore: 'Enter a whole number of points.',
     missingScorePlayer: 'That player is not in this game.',
     storageLoading: 'Restoring the saved game…',
@@ -187,6 +209,9 @@ function App() {
   const [physicalGame, setPhysicalGame] = useState<PhysicalGame | null>(null)
   const [setupError, setSetupError] = useState<SetupError | null>(null)
   const [scoreError, setScoreError] = useState<'invalid-score' | 'player-not-found' | null>(null)
+  const [roundCloseError, setRoundCloseError] = useState(false)
+  const [reviewingRound, setReviewingRound] = useState(false)
+  const [confirmingUndoAll, setConfirmingUndoAll] = useState(false)
   const [storageStatus, setStorageStatus] = useState<'loading' | 'ready' | 'saved' | 'unavailable' | 'invalid-data' | 'save-failed'>('loading')
   const t = copy[language]
 
@@ -231,10 +256,17 @@ function App() {
     if (storageStatus === 'invalid-data' || storageStatus === 'unavailable') setStorageStatus('ready')
   }
 
-  const undoTurn = () => {
+  const undoAction = () => {
     if (!physicalGame) return
-    const result = undoPhysicalTurn(physicalGame)
+    const result = undoPhysicalAction(physicalGame)
     if (result.ok) setPhysicalGame(result.game)
+  }
+
+  const undoAllActions = () => {
+    if (!physicalGame) return
+    const result = undoAllPhysicalActions(physicalGame)
+    if (result.ok) setPhysicalGame(result.game)
+    setConfirmingUndoAll(false)
   }
 
   const updateDraftScore = (playerId: string, value: string) => {
@@ -246,6 +278,30 @@ function App() {
       return
     }
     setScoreError(null)
+    setPhysicalGame(result.game)
+  }
+
+  const reviewRound = () => {
+    if (!physicalGame) return
+    const result = validatePendingRoundScores(physicalGame)
+    if (!result.ok) {
+      setRoundCloseError(true)
+      return
+    }
+    setRoundCloseError(false)
+    setReviewingRound(true)
+  }
+
+  const closeRound = () => {
+    if (!physicalGame) return
+    const result = confirmPhysicalRound(physicalGame)
+    if (!result.ok) {
+      setRoundCloseError(true)
+      setReviewingRound(false)
+      return
+    }
+    setRoundCloseError(false)
+    setReviewingRound(false)
     setPhysicalGame(result.game)
   }
 
@@ -421,7 +477,18 @@ function App() {
                           ))}
                         </div>
                       </section>
-                      <section className="round-entry" aria-labelledby="round-entry-title">
+                      {physicalGame.roundScores.length > 0 && <section className="round-history" aria-labelledby="round-history-title">
+                        <h2 id="round-history-title">{t.roundHistoryTitle}</h2>
+                        <div className="round-history-list">
+                          {physicalGame.roundScores.map((scores, roundIndex) => (
+                            <div className="round-history-row" key={roundIndex}>
+                              <strong>{t.roundLabel} {roundIndex + 1}</strong>
+                              {physicalGame.players.map((player) => <span key={player.id}>{player.name}: {scores[player.id]}</span>)}
+                            </div>
+                          ))}
+                        </div>
+                      </section>}
+                      {!reviewingRound ? <section className="round-entry" aria-labelledby="round-entry-title">
                         <h2 id="round-entry-title">{t.roundEntryTitle}</h2>
                         <div className="round-entry-list">
                           {physicalGame.players.map((player) => (
@@ -443,12 +510,37 @@ function App() {
                         {scoreErrorText
                           ? <p className="form-error" id="round-score-error" role="alert">{scoreErrorText}</p>
                           : <p className="score-note" id="round-score-note">{t.roundEntryNote}</p>}
-                      </section>
+                        {roundCloseError && <p className="form-error" role="alert">{t.missingRoundScores}</p>}
+                      </section> : <section className="round-entry round-review" aria-labelledby="round-review-title">
+                        <h2 id="round-review-title">{t.roundReviewTitle} · {t.roundLabel} {physicalGame.round}</h2>
+                        <p className="score-note">{t.roundReviewNote}</p>
+                        <div className="round-entry-list">
+                          {physicalGame.players.map((player) => (
+                            <div className="round-review-row" key={player.id}>
+                              <span>{player.name}</span>
+                              <strong>{physicalGame.pendingRoundScores[player.id]}</strong>
+                              <small>{physicalGame.scores[player.id]} → {physicalGame.scores[player.id] + (physicalGame.pendingRoundScores[player.id] ?? 0)}</small>
+                            </div>
+                          ))}
+                        </div>
+                        {roundCloseError && <p className="form-error" role="alert">{t.missingRoundScores}</p>}
+                      </section>}
                       <div className="turn-actions">
-                        <button className="button secondary" type="button" onClick={undoTurn} disabled={physicalGame.turnHistory.length === 0}>{t.undoTurn}</button>
-                        <button className="button primary" type="button" onClick={() => setPhysicalGame((current) => current ? advancePhysicalTurn(current) : current)}>{t.nextTurn}<span aria-hidden="true">↗</span></button>
+                        {confirmingUndoAll ? <>
+                          <span className="undo-confirm-text" role="status">{t.confirmUndoAll}</span>
+                          <button className="button secondary" type="button" onClick={() => setConfirmingUndoAll(false)}>{t.cancelUndoAll}</button>
+                          <button className="button primary" type="button" onClick={undoAllActions}>{t.confirmUndoAllButton}</button>
+                        </> : reviewingRound ? <>
+                          <button className="button secondary" type="button" onClick={() => setReviewingRound(false)}>{t.editRound}</button>
+                          <button className="button primary" type="button" onClick={closeRound}>{t.confirmRound}<span aria-hidden="true">↗</span></button>
+                        </> : <>
+                          <button className="button secondary" type="button" onClick={undoAction} disabled={physicalGame.actionHistory.length === 0}>{t.undoAction}</button>
+                          <button className="button secondary" type="button" onClick={() => setConfirmingUndoAll(true)} disabled={physicalGame.actionHistory.length === 0}>{t.undoAllActions}</button>
+                          <button className="button secondary" type="button" onClick={reviewRound}>{t.reviewRound}</button>
+                          <button className="button primary" type="button" onClick={() => setPhysicalGame((current) => current ? advancePhysicalTurn(current) : current)}>{t.nextTurn}<span aria-hidden="true">↗</span></button>
+                        </>}
                       </div>
-                      {physicalGame.turnHistory.length === 0 && <p className="undo-note">{t.noUndo}</p>}
+                      {!reviewingRound && physicalGame.actionHistory.length === 0 && <p className="undo-note">{t.noUndo}</p>}
                     </>
                   )}
                 </div>
