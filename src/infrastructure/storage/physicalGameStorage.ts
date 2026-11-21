@@ -1,16 +1,16 @@
 import { PhysicalGame } from '../../domain/physicalGame'
 
 const STORAGE_KEY = 'card-games:physical-game'
-const STORAGE_VERSION = 1
+const STORAGE_VERSION = 2
 
 export type PhysicalGameLoadResult =
   | { ok: true; game: PhysicalGame | null }
   | { ok: false; error: 'unavailable' | 'invalid-data' }
 
-function isPhysicalGame(value: unknown): value is PhysicalGame {
+function isPhysicalGameBase(value: unknown): value is Omit<PhysicalGame, 'turnHistory'> {
   if (!value || typeof value !== 'object') return false
 
-  const candidate = value as Partial<PhysicalGame>
+  const candidate = value as Partial<Omit<PhysicalGame, 'turnHistory'>>
   if (!Array.isArray(candidate.players) || candidate.players.length < 2 || candidate.players.length > 4) return false
   if (!Number.isInteger(candidate.activePlayerIndex) || candidate.activePlayerIndex! < 0 || candidate.activePlayerIndex! >= candidate.players.length) return false
   if (!Number.isInteger(candidate.round) || candidate.round! < 1) return false
@@ -23,6 +23,13 @@ function isPhysicalGame(value: unknown): value is PhysicalGame {
     && player.name.trim().length > 0,
   )
     && new Set(candidate.players.map((player) => player.name.trim().toLocaleLowerCase())).size === candidate.players.length
+}
+
+function isPhysicalGame(value: unknown): value is PhysicalGame {
+  if (!isPhysicalGameBase(value)) return false
+  const game = value as PhysicalGame
+  return Array.isArray(game.turnHistory)
+    && game.turnHistory.every((index) => Number.isInteger(index) && index >= 0 && index < game.players.length)
 }
 
 export function loadPhysicalGame(): PhysicalGameLoadResult {
@@ -44,11 +51,13 @@ export function loadPhysicalGame(): PhysicalGameLoadResult {
 
   if (!saved || typeof saved !== 'object') return { ok: false, error: 'invalid-data' }
   const record = saved as { version?: unknown; game?: unknown }
-  if (record.version !== STORAGE_VERSION || !isPhysicalGame(record.game)) {
-    return { ok: false, error: 'invalid-data' }
+  if (record.version === 1 && isPhysicalGameBase(record.game)) {
+    return { ok: true, game: { ...record.game, turnHistory: [] } }
   }
-
-  return { ok: true, game: record.game }
+  if (record.version === STORAGE_VERSION && isPhysicalGame(record.game)) {
+    return { ok: true, game: record.game }
+  }
+  return { ok: false, error: 'invalid-data' }
 }
 
 export function savePhysicalGame(game: PhysicalGame): boolean {
