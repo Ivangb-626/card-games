@@ -15,7 +15,7 @@ flowchart LR
   App --> Views[Inicio · configuración física · mesa inicial · modo digital demo · galería]
 ```
 
-No hay router, API, backend, autenticación, motor de reglas de Chinchón ni conexión de Supabase en el frontend. El modo físico permite configurar 2–4 jugadores, avanzar/deshacer turnos y recuperar la mesa local; la puntuación por ronda y el cierre todavía no están implementados. El modo digital continúa como demostración; las cartas son datos estáticos.
+No hay router, API, backend, autenticación, motor de reglas de Chinchón ni conexión de Supabase en el frontend. El modo físico permite configurar 2–4 jugadores, avanzar/deshacer turnos, recuperar la mesa local y guardar borradores de puntos por jugador. Los borradores no se aplican a los totales porque aún falta acordar y construir la confirmación de cierre. El modo digital continúa como demostración; las cartas son datos estáticos.
 
 ## Stack y publicación observados
 
