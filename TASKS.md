@@ -21,7 +21,7 @@
 - [x] Confirmar pausa indefinida tras 30 segundos, control temporal o expulsión por el anfitrión y ausencia de ventajas.
 - [x] Confirmar el alcance inicial de Texas Hold'em digital: partida básica completa de 2-9 jugadores.
 - [x] Confirmar que torneos, recompensas y variantes de Texas Hold'em quedan fuera del alcance inicial.
-- [ ] Confirmar pantallas mínimas y tamaños de soporte.
+- [x] Definir pantallas mínimas, estados y matriz de soporte responsive en `DESIGN_GUIDELINES.md`.
 
 **Dependencias:** las decisiones pendientes no bloquean el diseño visual; sí bloquean reconexión avanzada, variantes y persistencia automática.
 
@@ -47,7 +47,7 @@
 
 ## Fase 2 — Modo físico
 
-- [ ] Crear configuración de jugadores.
+- [x] Crear configuración y validación de 2–4 jugadores para Chinchón físico.
 - [ ] Crear selección de baraja y juego.
 - [ ] Crear asignación inicial de turnos.
 - [ ] Permitir avanzar y retroceder turno según las reglas confirmadas.

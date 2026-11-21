@@ -7,10 +7,10 @@ Crear una aplicación web de cartas que permita jugar tanto con cartas físicas 
 El MVP se centra en experiencia de usuario, representación visual de cartas, galería y mecánicas básicas. No pretende cubrir todavía estadísticas, historial competitivo ni una economía completa.
 
 ## Estado actual
-- Existe únicamente documentación de planificación; no hay implementación de producto.
-- Ya existe una primera base de documentos, que se mantiene y amplía con las decisiones acordadas.
-- La tecnología se seleccionará durante la fase de preparación sin incorporar dependencias en esta etapa.
-- Esta documentación define el punto de partida funcional y técnico; no implementa la aplicación.
+- La aplicación usa React, TypeScript y Vite; incluye navegación SPA y una galería visual de cartas españolas y americanas.
+- El modo físico permite configurar 2–4 jugadores de Chinchón y avanzar turnos; guarda y recupera esta mesa en el almacenamiento local del navegador. Aún no registra puntuaciones ni cierra rondas.
+- El modo digital sigue siendo una demostración. No hay motores completos de reglas, persistencia local, PWA, autenticación ni conexión de Supabase en el código.
+- Las decisiones de producto y arquitectura continúan documentadas aquí y en `ROADMAP.md`, `TECHNICAL_DESIGN.md`, `DESIGN_GUIDELINES.md` y `TASKS.md`.
 
 ## Decisiones confirmadas
 

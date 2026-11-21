@@ -2,18 +2,20 @@
 
 ## Alcance implementado
 
-El código actual es una fundación visual de una sola página. React monta `App` desde `src/main.tsx`; `src/App.tsx` mantiene en estado local el idioma, la vista y el filtro de barajas; `src/cards.ts` aporta datos de muestra; `src/styles.css` concentra los estilos responsive.
+El código actual es una SPA visual. React monta `App` desde `src/main.tsx`; `src/App.tsx` gestiona idioma, navegación, galería y la configuración/mesa inicial del modo físico. `src/domain/physicalGame.ts` valida los nombres y límites de jugadores y calcula el siguiente turno. `src/infrastructure/storage/physicalGameStorage.ts` guarda y recupera la mesa local con un número de versión. `src/cards.ts` aporta datos de muestra; `src/styles.css` concentra los estilos responsive.
 
 ```mermaid
 flowchart LR
   Browser[ navegador ] --> Entry[src/main.tsx]
   Entry --> App[src/App.tsx]
   App --> Demo[src/cards.ts]
+  App --> Physical[src/domain/physicalGame.ts]
+  App --> Storage[src/infrastructure/storage/physicalGameStorage.ts]
   App --> CSS[src/styles.css]
-  App --> Views[Inicio · modos demo · galería]
+  App --> Views[Inicio · configuración física · mesa inicial · modo digital demo · galería]
 ```
 
-No hay router, API, backend, autenticación, estado de partida persistido, motor de reglas ni conexión de Supabase en el frontend. Las vistas físico y digital son demostraciones; las cartas son datos estáticos.
+No hay router, API, backend, autenticación, motor de reglas de Chinchón ni conexión de Supabase en el frontend. El modo físico permite configurar 2–4 jugadores, avanzar turnos y recuperar la mesa local; la puntuación por ronda y el cierre todavía no están implementados. El modo digital continúa como demostración; las cartas son datos estáticos.
 
 ## Stack y publicación observados
 
