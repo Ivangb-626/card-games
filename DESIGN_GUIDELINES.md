@@ -38,7 +38,8 @@ Los puntos de corte vigentes en CSS son 520 px y 850 px. La hoja usa un ancho m�
 | Configuración | Sin jugadores, 2–4 jugadores válidos, nombre vacío o repetido, configuración lista | Añadir/editar jugadores e iniciar | Error asociado al campo; no se inicia con datos inválidos |
 | Lobby | Sin sala, esperando jugadores, listo para comenzar, sala expirada | Comenzar o volver | Explicar si falta un requisito y conservar los datos introducidos |
 | Mesa y turno | Turno propio, turno ajeno, jugador ausente, ronda en curso | Acción válida para el estado actual | Rechazar la acción con motivo junto al control |
-| Puntuación y cierre | Puntuación en edición, resumen de ronda, confirmación, ronda confirmada, partida finalizada | Revisar y confirmar el resumen | Mantener la edición reversible hasta confirmar; al confirmar se suman los puntos, avanza la ronda y se limpian los borradores |
+| Marcador físico | 2–4 contadores de puntuación, ajustables en cualquier momento | Sumar o restar un punto | El número se actualiza al instante y permanece guardado en el dispositivo |
+| Puntuación y cierre digital | Puntuación en edición, resumen de ronda, confirmación, ronda confirmada, partida finalizada | Revisar y confirmar el resumen | Mantener la edición reversible hasta confirmar; al confirmar se suman los puntos, avanza la ronda y se limpian los borradores |
 | Invitación y acceso | Invitación válida, código inválido, invitación caducada, acceso rechazado | Unirse o volver | Indicar el problema y ofrecer volver a inicio |
 | Conexión | Conectado, reconectando, ausente, pausa indefinida, reingreso | Reintentar o reanudar | Conservar asiento y estado; mostrar las acciones disponibles al anfitrión |
 | Continuidad física | Estado local cargado, guardado, error al recuperar, uso offline | Continuar o iniciar partida | No reemplazar un guardado recuperable sin explicar el problema |

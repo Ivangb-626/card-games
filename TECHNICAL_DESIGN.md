@@ -89,9 +89,7 @@ El estado de juego debe ser inmutable o reproducible. Cada acción válida se gu
 
 Las acciones rechazadas deben conservar el estado original y devolver una razón visible. Los cambios de interfaz nunca deben alterar la puntuación directamente.
 
-En el modo físico, el cierre exige un puntaje entero para cada jugador. La interfaz muestra el resumen y los acumulados resultantes antes de confirmar; la confirmación añade los puntajes a la tabla de rondas, actualiza los acumulados, avanza la ronda y limpia los borradores. El siguiente turno conserva el jugador activo y el historial de turnos de la ronda cerrada se limpia.
-
-Las acciones físicas reversibles de la ronda se apilan en el dominio. Deshacer restaura el turno y los borradores al estado previo a la última acción; la opción de deshacer toda la ronda restaura el estado anterior a la primera acción reversible y pide confirmación en la interfaz. Las modificaciones consecutivas del mismo campo de puntuación se agrupan como una sola acción para que la edición teclado-a-teclado se revierta completa. Al confirmar el cierre se limpia esta pila; la edición de puntos ya confirmados no forma parte del deshacer normal de la ronda.
+El modo físico usa un modelo simple: jugadores y una puntuación entera por jugador. El dominio permite ajustar el contador en incrementos de un punto hacia arriba o abajo, sin estado de turno ni ronda. El almacenamiento local persiste los valores; al migrar guardados anteriores, conserva los acumulados y suma los borradores de puntuación que estuvieran pendientes.
 
 ## Deshacer
 

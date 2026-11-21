@@ -1,101 +1,75 @@
-import { PhysicalGame } from '../../domain/physicalGame'
+import { PhysicalGame, PhysicalPlayer } from '../../domain/physicalGame'
 
 const STORAGE_KEY = 'card-games:physical-game'
-const STORAGE_VERSION = 5
+const STORAGE_VERSION = 6
 
 export type PhysicalGameLoadResult =
   | { ok: true; game: PhysicalGame | null }
   | { ok: false; error: 'unavailable' | 'invalid-data' }
 
-type PhysicalGameIdentity = Omit<PhysicalGame, 'turnHistory' | 'scores' | 'roundScores' | 'pendingRoundScores' | 'actionHistory'>
+function readPlayers(value: unknown): PhysicalPlayer[] | null {
+  if (!Array.isArray(value) || value.length < 2 || value.length > 4) return null
 
-function isPhysicalGameBase(value: unknown): value is PhysicalGameIdentity {
-  if (!value || typeof value !== 'object') return false
-
-  const candidate = value as Partial<PhysicalGameIdentity>
-  if (!Array.isArray(candidate.players) || candidate.players.length < 2 || candidate.players.length > 4) return false
-  if (!Number.isInteger(candidate.activePlayerIndex) || candidate.activePlayerIndex! < 0 || candidate.activePlayerIndex! >= candidate.players.length) return false
-  if (!Number.isInteger(candidate.round) || candidate.round! < 1) return false
-
-  return candidate.players.every((player) =>
+  const players = value as Partial<PhysicalPlayer>[]
+  if (!players.every((player) =>
     Boolean(player)
     && typeof player.id === 'string'
     && player.id.length > 0
     && typeof player.name === 'string'
     && player.name.trim().length > 0,
-  )
-    && new Set(candidate.players.map((player) => player.name.trim().toLocaleLowerCase())).size === candidate.players.length
+  )) return null
+
+  const ids = players.map((player) => player.id as string)
+  const names = players.map((player) => (player.name as string).trim().toLocaleLowerCase())
+  if (new Set(ids).size !== players.length || new Set(names).size !== players.length) return null
+
+  return players.map((player) => ({ id: player.id as string, name: (player.name as string).trim() }))
 }
 
-function hasValidTurnHistory(value: unknown): value is PhysicalGameIdentity & { turnHistory: number[] } {
-  if (!isPhysicalGameBase(value)) return false
-  const turnHistory = (value as Partial<PhysicalGame>).turnHistory
-  return Array.isArray(turnHistory)
-    && turnHistory.every((index) => Number.isInteger(index) && index >= 0 && index < value.players.length)
+function readScoreMap(value: unknown, players: PhysicalPlayer[]): Record<string, number> | null {
+  if (!value || typeof value !== 'object') return null
+  const candidate = value as Record<string, unknown>
+  if (Object.keys(candidate).length !== players.length) return null
+  if (!players.every((player) => Number.isSafeInteger(candidate[player.id]))) return null
+
+  return Object.fromEntries(players.map((player) => [player.id, candidate[player.id] as number]))
 }
 
-function hasValidScoreState(value: unknown, hasRoundScores: boolean): value is PhysicalGame {
-  if (!hasValidTurnHistory(value)) return false
-  const game = value as Pick<PhysicalGame, 'players' | 'turnHistory'> & Partial<Pick<PhysicalGame, 'scores' | 'roundScores' | 'pendingRoundScores'>>
-  if (!game.scores || typeof game.scores !== 'object' || !game.pendingRoundScores || typeof game.pendingRoundScores !== 'object') return false
+function readPendingScoreMap(value: unknown, players: PhysicalPlayer[]): Record<string, number | null> | null {
+  if (!value || typeof value !== 'object') return null
+  const candidate = value as Record<string, unknown>
+  if (Object.keys(candidate).length !== players.length) return null
+  if (!players.every((player) => candidate[player.id] === null || Number.isSafeInteger(candidate[player.id]))) return null
 
-  const validScores = game.players.every((player) =>
-    Number.isInteger(game.scores?.[player.id])
-    && (game.pendingRoundScores?.[player.id] === null || Number.isInteger(game.pendingRoundScores?.[player.id])),
-  )
-  if (!validScores) return false
-  if (!hasRoundScores) return true
-  if (!Array.isArray(game.roundScores) || game.roundScores.length !== (value as PhysicalGame).round - 1) return false
-
-  return game.roundScores.every((roundScores) =>
-    Boolean(roundScores)
-    && typeof roundScores === 'object'
-    && game.players.every((player) => Number.isInteger(roundScores[player.id]))
-    && Object.keys(roundScores).length === game.players.length,
-  )
+  return Object.fromEntries(players.map((player) => [player.id, candidate[player.id] as number | null]))
 }
 
-function hasValidActionHistory(value: unknown): value is PhysicalGame {
-  if (!hasValidScoreState(value, true)) return false
-  const game = value as PhysicalGame
-  return Array.isArray(game.actionHistory) && game.actionHistory.every((snapshot) =>
-    Boolean(snapshot)
-    && typeof snapshot.actionKey === 'string'
-    && (snapshot.actionKey === 'turn' || game.players.some((player) => snapshot.actionKey === `score:${player.id}`))
-    && Number.isInteger(snapshot.activePlayerIndex)
-    && snapshot.activePlayerIndex >= 0
-    && snapshot.activePlayerIndex < game.players.length
-    && Array.isArray(snapshot.turnHistory)
-    && snapshot.turnHistory.every((index) => Number.isInteger(index) && index >= 0 && index < game.players.length)
-    && snapshot.pendingRoundScores
-    && typeof snapshot.pendingRoundScores === 'object'
-    && Object.keys(snapshot.pendingRoundScores).length === game.players.length
-    && game.players.every((player) =>
-      snapshot.pendingRoundScores[player.id] === null
-      || Number.isInteger(snapshot.pendingRoundScores[player.id]),
-    ),
-  )
-}
-
-function createActionHistoryFromTurns(game: Pick<PhysicalGame, 'players' | 'turnHistory' | 'pendingRoundScores'>): PhysicalGame['actionHistory'] {
-  return game.turnHistory.map((activePlayerIndex, index) => ({
-    actionKey: 'turn',
-    activePlayerIndex,
-    turnHistory: game.turnHistory.slice(0, index),
-    pendingRoundScores: { ...game.pendingRoundScores },
-  }))
-}
-
-function createEmptyScoreState(game: PhysicalGameIdentity, turnHistory: number[] = []): PhysicalGame {
-  const scoreState = {
-    ...game,
-    turnHistory,
-    scores: Object.fromEntries(game.players.map((player) => [player.id, 0])),
-    roundScores: [],
-    pendingRoundScores: Object.fromEntries(game.players.map((player) => [player.id, null])),
-    actionHistory: [],
+function createZeroScoreGame(players: PhysicalPlayer[]): PhysicalGame {
+  return {
+    players,
+    scores: Object.fromEntries(players.map((player) => [player.id, 0])),
   }
-  return { ...scoreState, actionHistory: createActionHistoryFromTurns(scoreState) }
+}
+
+function migrateLegacyGame(value: unknown, includePendingScores: boolean): PhysicalGame | null {
+  if (!value || typeof value !== 'object') return null
+  const legacy = value as { players?: unknown; scores?: unknown; pendingRoundScores?: unknown }
+  const players = readPlayers(legacy.players)
+  if (!players) return null
+  if (!includePendingScores) return createZeroScoreGame(players)
+
+  const totals = readScoreMap(legacy.scores, players)
+  const pending = readPendingScoreMap(legacy.pendingRoundScores, players)
+  if (!totals || !pending) return null
+
+  const scores = Object.fromEntries(players.map((player) => {
+    const pendingScore = pending[player.id]
+    const score = totals[player.id] + (pendingScore ?? 0)
+    return [player.id, Number.isSafeInteger(score) ? score : null]
+  }))
+  if (Object.values(scores).some((score) => score === null)) return null
+
+  return { players, scores: scores as Record<string, number> }
 }
 
 export function loadPhysicalGame(): PhysicalGameLoadResult {
@@ -117,22 +91,26 @@ export function loadPhysicalGame(): PhysicalGameLoadResult {
 
   if (!saved || typeof saved !== 'object') return { ok: false, error: 'invalid-data' }
   const record = saved as { version?: unknown; game?: unknown }
-  if (record.version === 1 && isPhysicalGameBase(record.game)) {
-    return { ok: true, game: createEmptyScoreState(record.game) }
+
+  if (record.version === 1 || record.version === 2) {
+    const game = migrateLegacyGame(record.game, false)
+    return game ? { ok: true, game } : { ok: false, error: 'invalid-data' }
   }
-  if (record.version === 2 && hasValidTurnHistory(record.game)) {
-    return { ok: true, game: createEmptyScoreState(record.game, record.game.turnHistory) }
+
+  if (record.version === 3 || record.version === 4 || record.version === 5) {
+    const game = migrateLegacyGame(record.game, true)
+    return game ? { ok: true, game } : { ok: false, error: 'invalid-data' }
   }
-  if (record.version === 3 && hasValidScoreState(record.game, false)) {
-    const game = { ...record.game, roundScores: [] }
-    return { ok: true, game: { ...game, actionHistory: createActionHistoryFromTurns(game) } }
+
+  if (record.version === STORAGE_VERSION && record.game && typeof record.game === 'object') {
+    const stored = record.game as { players?: unknown; scores?: unknown }
+    const players = readPlayers(stored.players)
+    const scores = players ? readScoreMap(stored.scores, players) : null
+    return players && scores
+      ? { ok: true, game: { players, scores } }
+      : { ok: false, error: 'invalid-data' }
   }
-  if (record.version === 4 && hasValidScoreState(record.game, true)) {
-    return { ok: true, game: { ...record.game, actionHistory: createActionHistoryFromTurns(record.game) } }
-  }
-  if (record.version === STORAGE_VERSION && hasValidActionHistory(record.game)) {
-    return { ok: true, game: record.game }
-  }
+
   return { ok: false, error: 'invalid-data' }
 }
 
