@@ -8,6 +8,8 @@ export type PhysicalGame = {
   activePlayerIndex: number
   round: number
   turnHistory: number[]
+  scores: Record<string, number>
+  pendingRoundScores: Record<string, number | null>
 }
 
 export type SetupError = 'player-count' | 'empty-name' | 'duplicate-name'
@@ -19,6 +21,10 @@ export type SetupResult =
 export type UndoTurnResult =
   | { ok: true; game: PhysicalGame }
   | { ok: false; error: 'nothing-to-undo' }
+
+export type PendingScoreResult =
+  | { ok: true; game: PhysicalGame }
+  | { ok: false; error: 'player-not-found' | 'invalid-score' }
 
 export function createPhysicalGame(names: string[]): SetupResult {
   if (names.length < 2 || names.length > 4) return { ok: false, error: 'player-count' }
@@ -36,6 +42,8 @@ export function createPhysicalGame(names: string[]): SetupResult {
       activePlayerIndex: 0,
       round: 1,
       turnHistory: [],
+      scores: Object.fromEntries(cleanedNames.map((_, index) => [`player-${index + 1}`, 0])),
+      pendingRoundScores: Object.fromEntries(cleanedNames.map((_, index) => [`player-${index + 1}`, null])),
     },
   }
 }
@@ -57,6 +65,19 @@ export function undoPhysicalTurn(game: PhysicalGame): UndoTurnResult {
       ...game,
       activePlayerIndex: game.turnHistory[game.turnHistory.length - 1],
       turnHistory: game.turnHistory.slice(0, -1),
+    },
+  }
+}
+
+export function setPendingRoundScore(game: PhysicalGame, playerId: string, score: number | null): PendingScoreResult {
+  if (!game.players.some((player) => player.id === playerId)) return { ok: false, error: 'player-not-found' }
+  if (score !== null && !Number.isInteger(score)) return { ok: false, error: 'invalid-score' }
+
+  return {
+    ok: true,
+    game: {
+      ...game,
+      pendingRoundScores: { ...game.pendingRoundScores, [playerId]: score },
     },
   }
 }

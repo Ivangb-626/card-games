@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { americanCards, DemoCard, DeckKind, spanishCards } from './cards'
-import { advancePhysicalTurn, createPhysicalGame, PhysicalGame, SetupError, undoPhysicalTurn } from './domain/physicalGame'
+import { advancePhysicalTurn, createPhysicalGame, PhysicalGame, SetupError, setPendingRoundScore, undoPhysicalTurn } from './domain/physicalGame'
 import { loadPhysicalGame, savePhysicalGame } from './infrastructure/storage/physicalGameStorage'
 
 type Language = 'es' | 'en'
@@ -66,7 +66,10 @@ const copy = {
     noUndo: 'No hay turnos que deshacer.',
     activePlayer: 'Turno actual',
     scoresTitle: 'Puntuación acumulada',
-    initialScore: 'Los puntos de ronda se podrán registrar en el siguiente paso.',
+    roundEntryTitle: 'Puntos de esta ronda',
+    roundEntryNote: 'El borrador se guarda en este dispositivo y no se suma al total hasta confirmar el cierre de ronda.',
+    invalidScore: 'Introduce un número entero de puntos.',
+    missingScorePlayer: 'No se encontró ese jugador en la partida.',
     storageLoading: 'Recuperando la partida guardada…',
     storageSaved: 'Partida guardada en este dispositivo.',
     storageUnavailable: 'No se puede acceder al almacenamiento local. La partida solo estará disponible mientras esta pestaña permanezca abierta.',
@@ -133,7 +136,10 @@ const copy = {
     noUndo: 'There are no turns to undo.',
     activePlayer: 'Current turn',
     scoresTitle: 'Running score',
-    initialScore: 'Round scores can be entered in the next step.',
+    roundEntryTitle: 'Scores for this round',
+    roundEntryNote: 'This draft is saved on this device and will not affect totals until the round is confirmed.',
+    invalidScore: 'Enter a whole number of points.',
+    missingScorePlayer: 'That player is not in this game.',
     storageLoading: 'Restoring the saved game…',
     storageSaved: 'Game saved on this device.',
     storageUnavailable: 'Local storage is unavailable. This game will only remain available while this tab is open.',
@@ -180,6 +186,7 @@ function App() {
   const [playerNames, setPlayerNames] = useState(['', ''])
   const [physicalGame, setPhysicalGame] = useState<PhysicalGame | null>(null)
   const [setupError, setSetupError] = useState<SetupError | null>(null)
+  const [scoreError, setScoreError] = useState<'invalid-score' | 'player-not-found' | null>(null)
   const [storageStatus, setStorageStatus] = useState<'loading' | 'ready' | 'saved' | 'unavailable' | 'invalid-data' | 'save-failed'>('loading')
   const t = copy[language]
 
@@ -230,6 +237,18 @@ function App() {
     if (result.ok) setPhysicalGame(result.game)
   }
 
+  const updateDraftScore = (playerId: string, value: string) => {
+    if (!physicalGame) return
+    const parsedScore = value === '' ? null : Number(value)
+    const result = setPendingRoundScore(physicalGame, playerId, parsedScore)
+    if (!result.ok) {
+      setScoreError(result.error)
+      return
+    }
+    setScoreError(null)
+    setPhysicalGame(result.game)
+  }
+
   const setupErrorText = setupError === 'player-count'
     ? t.playerCountError
     : setupError === 'empty-name'
@@ -249,6 +268,12 @@ function App() {
           : storageStatus === 'save-failed'
             ? t.storageSaveError
             : null
+
+  const scoreErrorText = scoreError === 'invalid-score'
+    ? t.invalidScore
+    : scoreError === 'player-not-found'
+      ? t.missingScorePlayer
+      : null
 
   return (
     <div className="app-shell">
@@ -391,12 +416,34 @@ function App() {
                           {physicalGame.players.map((player, index) => (
                             <article className={index === physicalGame.activePlayerIndex ? 'score-player active' : 'score-player'} key={player.id}>
                               <div><span className="score-player-name">{player.name}</span>{index === physicalGame.activePlayerIndex && <span className="turn-badge">{t.activePlayer}</span>}</div>
-                              <strong>0</strong>
+                              <strong>{physicalGame.scores[player.id] ?? 0}</strong>
                             </article>
                           ))}
                         </div>
                       </section>
-                      <p className="score-note">{t.initialScore}</p>
+                      <section className="round-entry" aria-labelledby="round-entry-title">
+                        <h2 id="round-entry-title">{t.roundEntryTitle}</h2>
+                        <div className="round-entry-list">
+                          {physicalGame.players.map((player) => (
+                            <div className="round-entry-row" key={player.id}>
+                              <label htmlFor={`round-score-${player.id}`}>{player.name}</label>
+                              <input
+                                id={`round-score-${player.id}`}
+                                type="number"
+                                step="1"
+                                value={physicalGame.pendingRoundScores[player.id] ?? ''}
+                                onChange={(event) => updateDraftScore(player.id, event.target.value)}
+                                aria-label={`${t.roundEntryTitle}: ${player.name}`}
+                                aria-invalid={scoreError === 'invalid-score'}
+                                aria-describedby={scoreErrorText ? 'round-score-error' : 'round-score-note'}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                        {scoreErrorText
+                          ? <p className="form-error" id="round-score-error" role="alert">{scoreErrorText}</p>
+                          : <p className="score-note" id="round-score-note">{t.roundEntryNote}</p>}
+                      </section>
                       <div className="turn-actions">
                         <button className="button secondary" type="button" onClick={undoTurn} disabled={physicalGame.turnHistory.length === 0}>{t.undoTurn}</button>
                         <button className="button primary" type="button" onClick={() => setPhysicalGame((current) => current ? advancePhysicalTurn(current) : current)}>{t.nextTurn}<span aria-hidden="true">↗</span></button>
