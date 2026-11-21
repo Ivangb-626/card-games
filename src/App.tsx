@@ -316,8 +316,8 @@ function App() {
       : null
 
   return (
-    <div className={view === 'physical' && physicalGame ? 'app-shell scorekeeper-shell' : 'app-shell'}>
-      <header className="topbar">
+    <div className={`${view === 'home' ? 'app-shell mode-picker-shell' : 'app-shell'}${view === 'physical' && physicalGame ? ' scorekeeper-shell' : ''}`}>
+      {view !== 'home' && <header className="topbar">
         <button className="brand" onClick={() => navigate('home')} aria-label={t.homeLabel}>
           <span className="brand-mark" aria-hidden="true">✦</span>
           <span>Card Games</span>
@@ -350,58 +350,22 @@ function App() {
             <button className={language === 'en' ? 'language active' : 'language'} onClick={() => setLanguage('en')} aria-pressed={language === 'en'}>EN</button>
           </div>
         </div>
-      </header>
+      </header>}
 
       <main>
         {view === 'home' && (
-          <>
-            <section className="hero">
-              <div className="hero-copy">
-                <p className="eyebrow">{t.eyebrow}</p>
-                <h1>{t.title}</h1>
-                <p className="hero-intro">{t.intro}</p>
-                <div className="hero-actions">
-                  <button className="button primary" onClick={() => navigate('gallery')}>{t.primary}<span aria-hidden="true">↗</span></button>
-                  <button className="button secondary" onClick={() => navigate('physical-games')}>{t.secondary}</button>
-                </div>
-                <div className="hero-note">
-                  <span className="note-icon" aria-hidden="true">⌁</span>
-                  <span>{t.note}</span>
-                </div>
-              </div>
-              <div className="hero-art" aria-label={t.heroCardsLabel}>
-                <div className="sun-orbit orbit-one" />
-                <div className="sun-orbit orbit-two" />
-                <div className="hero-card card-back tilt-left" aria-hidden="true"><span>✦</span></div>
-                <div className="hero-card playing-card warm tilt-main"><div className="card-corner"><strong>7</strong><span>♥</span></div><div className="card-emblem">♥</div><div className="card-footer"><span>{t.cups}</span><strong>7</strong></div></div>
-                <div className="hero-card playing-card cool tilt-right"><div className="card-corner"><strong>K</strong><span>♠</span></div><div className="card-emblem">♠</div><div className="card-footer"><span>{t.spades}</span><strong>K</strong></div></div>
-              </div>
-            </section>
-
-            <section className="mode-grid" aria-label={t.modesLabel}>
-              <button className="mode-card physical-mode" onClick={() => navigate('physical-games')}>
-                <div className="mode-icon">♧</div>
-                <div><p className="eyebrow">01 · {t.physical}</p><h2>{t.physical}</h2><p>{t.physicalText}</p></div><span className="arrow" aria-hidden="true">↗</span>
-              </button>
-              <button className="mode-card digital-mode" onClick={() => navigate('digital-games')}>
-                <div className="mode-icon">◈</div>
-                <div><p className="eyebrow">02 · {t.digital}</p><h2>{t.digital}</h2><p>{t.digitalText}</p></div><span className="arrow" aria-hidden="true">↗</span>
-              </button>
-              <button className="mode-card gallery-mode" onClick={() => navigate('gallery')}>
-                <div className="mode-icon">▦</div>
-                <div><p className="eyebrow">03 · {t.gallery}</p><h2>{t.gallery}</h2><p>{t.galleryText}</p></div><span className="arrow" aria-hidden="true">↗</span>
-              </button>
-            </section>
-
-            <section className="states-section">
-              <div className="section-heading"><div><p className="eyebrow">03 · {t.featured}</p><h2>{t.featured}</h2></div><p>{t.featuredText}</p></div>
-              <div className="state-grid">
-                <article className="state-card"><span className="state-icon yellow">◌</span><div><h3>{t.lobby}</h3><p>{t.lobbyText}</p></div><span className="state-status">●</span></article>
-                <article className="state-card"><span className="state-icon coral">✦</span><div><h3>{t.turn}</h3><p>{t.turnText}</p></div><span className="state-status">●</span></article>
-                <article className="state-card"><span className="state-icon lilac">↻</span><div><h3>{t.reconnect}</h3><p>{t.reconnectText}</p></div><span className="state-status">●</span></article>
-              </div>
-            </section>
-          </>
+          <section className="mode-picker" aria-label={t.modesLabel}>
+            <button className="mode-picker-card physical-mode" type="button" onClick={() => navigate('physical-games')}>
+              <span className="mode-icon" aria-hidden="true">♧</span>
+              <span>{t.physical}</span>
+              <span className="arrow" aria-hidden="true">↗</span>
+            </button>
+            <button className="mode-picker-card digital-mode" type="button" onClick={() => navigate('digital-games')}>
+              <span className="mode-icon" aria-hidden="true">◈</span>
+              <span>{t.digital}</span>
+              <span className="arrow" aria-hidden="true">↗</span>
+            </button>
+          </section>
         )}
 
         {view !== 'home' && (
@@ -558,7 +522,7 @@ function App() {
         )}
       </main>
 
-      <footer className="footer"><span>Card Games · foundation 01</span><span>{t.footer}</span></footer>
+      {view !== 'home' && <footer className="footer"><span>Card Games · foundation 01</span><span>{t.footer}</span></footer>}
     </div>
   )
 }
