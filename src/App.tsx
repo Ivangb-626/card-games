@@ -1,16 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { KeyboardEvent, TouchEvent, WheelEvent } from 'react'
-import { americanCards, DemoCard, DeckKind, spanishCards } from './cards'
 import { adjustPlayerScore, createPhysicalGame, PhysicalGame, SetupError } from './domain/physicalGame'
 import { loadPhysicalGame, savePhysicalGame } from './infrastructure/storage/physicalGameStorage'
 
 type Language = 'es' | 'en'
-type View = 'home' | 'physical-games' | 'physical' | 'digital-games' | 'digital' | 'gallery'
+type View = 'home' | 'physical-games' | 'physical' | 'digital-games' | 'digital'
 
 const copy = {
   es: {
-    nav: ['Inicio', 'Modo físico', 'Modo digital', 'Galería'],
-    navLabel: 'Navegación principal',
     eyebrow: 'MESA ABIERTA · MVP VISUAL',
     title: 'Tus cartas, tu mesa, tu ritmo.',
     intro: 'Una base clara para jugar con cartas físicas hoy y preparar partidas digitales privadas mañana.',
@@ -20,8 +17,6 @@ const copy = {
     physicalText: 'Lleva la puntuación de una partida presencial, incluso sin red.',
     digital: 'Modo digital',
     digitalText: 'Prepara una sala privada por invitación.',
-    gallery: 'Galería de cartas',
-    galleryText: 'Conoce la baraja antes de empezar.',
     featured: 'Estados de la mesa',
     featuredText: 'Diseñamos la experiencia alrededor de un estado visible y fácil de corregir.',
     lobby: 'Esperando jugadores',
@@ -35,7 +30,7 @@ const copy = {
     all: 'Todas',
     demo: 'Demostración visual',
     demoText: 'Estas cartas son datos de muestra; las reglas llegarán en una fase posterior.',
-    back: 'Volver al inicio',
+    back: 'Volver a modos',
     open: 'Abrir',
     demoStatus: 'Demo visual',
     ready: 'Preparado',
@@ -84,19 +79,14 @@ const copy = {
     footer: 'Responsive · teclado · contraste AA',
   },
   en: {
-    nav: ['Home', 'Physical mode', 'Digital mode', 'Gallery'],
-    navLabel: 'Main navigation',
     eyebrow: 'OPEN TABLE · VISUAL MVP',
     title: 'Your cards, your table, your pace.',
     intro: 'A clear foundation for playing with physical cards today and preparing private digital games tomorrow.',
-    primary: 'Explore the gallery',
     secondary: 'View game modes',
     physical: 'Physical mode',
     physicalText: 'Keep score for an in-person game, even offline.',
     digital: 'Digital mode',
     digitalText: 'Prepare a private invite-only room.',
-    gallery: 'Card gallery',
-    galleryText: 'Meet the deck before you start.',
     featured: 'Table states',
     featuredText: 'The experience is built around visible, recoverable state.',
     lobby: 'Waiting for players',
@@ -110,7 +100,7 @@ const copy = {
     all: 'All',
     demo: 'Visual demo',
     demoText: 'These cards are sample data; rules arrive in a later phase.',
-    back: 'Back to home',
+    back: 'Back to modes',
     open: 'Open',
     demoStatus: 'Visual demo',
     ready: 'Ready',
@@ -160,40 +150,9 @@ const copy = {
   },
 } as const
 
-const cardLabels: Record<Language, Record<string, string>> = {
-  es: {
-    'As de oros': 'As de oros', 'Siete de copas': 'Siete de copas', 'Sota de bastos': 'Sota de bastos', 'Rey de espadas': 'Rey de espadas',
-  },
-  en: {
-    'As de oros': 'Ace of coins', 'Siete de copas': 'Seven of cups', 'Sota de bastos': 'Jack of clubs', 'Rey de espadas': 'King of swords',
-  },
-}
-
-const suitLabels: Record<Language, Record<string, string>> = {
-  es: { Oros: 'Oros', Copas: 'Copas', Bastos: 'Bastos', Espadas: 'Espadas', Hearts: 'Corazones', Diamonds: 'Diamantes', Clubs: 'Tréboles', Spades: 'Picas' },
-  en: { Oros: 'Coins', Copas: 'Cups', Bastos: 'Clubs', Espadas: 'Swords' },
-}
-
-function Card({ card, label, suit }: { card: DemoCard; label: string; suit: string }) {
-  return (
-    <article className={`playing-card ${card.accent}`} aria-label={label} tabIndex={0}>
-      <div className="card-corner">
-        <strong>{card.value}</strong>
-        <span aria-hidden="true">{card.suitSymbol}</span>
-      </div>
-      <div className="card-emblem" aria-hidden="true">{card.suitSymbol}</div>
-      <div className="card-footer">
-        <span>{suit}</span>
-        <strong>{card.value}</strong>
-      </div>
-    </article>
-  )
-}
-
 function App() {
-  const [language, setLanguage] = useState<Language>('es')
+  const language: Language = 'es'
   const [view, setView] = useState<View>('home')
-  const [deck, setDeck] = useState<DeckKind | 'all'>('all')
   const [playerNames, setPlayerNames] = useState(['', ''])
   const [physicalGame, setPhysicalGame] = useState<PhysicalGame | null>(null)
   const [setupError, setSetupError] = useState<SetupError | null>(null)
@@ -221,12 +180,6 @@ function App() {
     if (!physicalGame || !['ready', 'saved', 'save-failed'].includes(storageStatus)) return
     setStorageStatus(savePhysicalGame(physicalGame) ? 'saved' : 'save-failed')
   }, [physicalGame, storageStatus])
-
-  const cards = useMemo(() => {
-    if (deck === 'spanish') return spanishCards
-    if (deck === 'american') return americanCards
-    return [...spanishCards, ...americanCards]
-  }, [deck])
 
   const navigate = (nextView: View) => {
     setView(nextView)
@@ -317,41 +270,6 @@ function App() {
 
   return (
     <div className={`${view === 'home' ? 'app-shell mode-picker-shell' : 'app-shell'}${view === 'physical' && physicalGame ? ' scorekeeper-shell' : ''}`}>
-      {view !== 'home' && <header className="topbar">
-        <button className="brand" onClick={() => navigate('home')} aria-label={t.homeLabel}>
-          <span className="brand-mark" aria-hidden="true">✦</span>
-          <span>Card Games</span>
-        </button>
-        <nav className="main-nav" aria-label={t.navLabel}>
-          {t.nav.map((label, index) => {
-            const target = ['home', 'physical-games', 'digital-games', 'gallery'][index] as View
-            const active = target === 'physical-games'
-              ? view === 'physical-games' || view === 'physical'
-              : target === 'digital-games'
-                ? view === 'digital-games' || view === 'digital'
-                : view === target
-            return (
-              <button
-                className={active ? 'nav-link active' : 'nav-link'}
-                key={label}
-                onClick={() => navigate(target)}
-                aria-current={active ? 'page' : undefined}
-              >
-                {label}
-              </button>
-            )
-          })}
-        </nav>
-        <div className="topbar-actions">
-          <span className="status-dot" aria-hidden="true" />
-          <span className="status-label">{t.demoStatus}</span>
-          <div className="language-switcher" role="group" aria-label={t.languageLabel}>
-            <button className={language === 'es' ? 'language active' : 'language'} onClick={() => setLanguage('es')} aria-pressed={language === 'es'}>ES</button>
-            <button className={language === 'en' ? 'language active' : 'language'} onClick={() => setLanguage('en')} aria-pressed={language === 'en'}>EN</button>
-          </div>
-        </div>
-      </header>}
-
       <main>
         {view === 'home' && (
           <section className="mode-picker" aria-label={t.modesLabel}>
@@ -374,15 +292,7 @@ function App() {
               className="back-link"
               onClick={() => navigate(view === 'physical-games' || view === 'digital-games' ? 'home' : view === 'physical' ? 'physical-games' : view === 'digital' ? 'digital-games' : 'home')}
             >← {view === 'physical-games' || view === 'digital-games' ? t.back : t.backToMode}</button>
-            {view === 'gallery' ? (
-              <>
-                <div className="subpage-heading"><p className="eyebrow">{t.demo}</p><h1>{t.gallery}</h1><p>{t.demoText}</p></div>
-                <div className="filter-row" role="group" aria-label={t.filterLabel}>
-                  {(['all', 'spanish', 'american'] as const).map((option) => <button key={option} className={deck === option ? 'filter active' : 'filter'} onClick={() => setDeck(option)} aria-pressed={deck === option}>{option === 'all' ? t.all : option === 'spanish' ? t.spanish : t.american}</button>)}
-                </div>
-                <div className="gallery-grid">{cards.map((card) => <Card key={card.id} card={card} label={cardLabels[language][card.label] ?? card.label} suit={suitLabels[language][card.suit] ?? card.suit} />)}</div>
-              </>
-            ) : view === 'physical-games' ? (
+            {view === 'physical-games' ? (
               <>
                 <div className="subpage-heading">
                   <p className="eyebrow">01 · {t.physical}</p>
@@ -514,7 +424,7 @@ function App() {
                     <div><span className="check" aria-hidden="true">✓</span><span>{t.turn}</span><strong>{t.demoValue}</strong></div>
                     <div><span className="check" aria-hidden="true">✓</span><span>{t.reconnect}</span><strong>{t.safe}</strong></div>
                   </div>
-                  <button className="button primary" onClick={() => navigate('gallery')}>{t.open} {t.gallery}<span aria-hidden="true">↗</span></button>
+                  <button className="button primary" onClick={() => navigate('digital-games')}>← {t.backToMode}</button>
                 </div>
               )
             }
@@ -522,7 +432,6 @@ function App() {
         )}
       </main>
 
-      {view !== 'home' && <footer className="footer"><span>Card Games · foundation 01</span><span>{t.footer}</span></footer>}
     </div>
   )
 }
