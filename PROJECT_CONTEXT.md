@@ -8,7 +8,7 @@ El MVP se centra en experiencia de usuario, representación visual de cartas, ga
 
 ## Estado actual
 - La aplicación usa React, TypeScript y Vite; incluye navegación SPA y una galería visual de cartas españolas y americanas.
-- El modo físico permite configurar 2–4 jugadores de Chinchón, avanzar y deshacer turnos, y guardar borradores de puntos por ronda; guarda y recupera la mesa en el almacenamiento local. Los borradores no se suman al total hasta confirmar el cierre, cuya secuencia sigue pendiente.
+- El modo físico permite configurar 2–4 jugadores de Chinchón, avanzar turnos, deshacer una acción o todas las acciones de turno y puntuación de la ronda actual, y guardar borradores de puntos por ronda; guarda y recupera la mesa en el almacenamiento local. El cierre muestra un resumen revisable y, al confirmarlo, registra los puntos de la ronda, actualiza los acumulados, avanza la ronda y limpia los borradores.
 - El modo digital sigue siendo una demostración. No hay motores completos de reglas, persistencia local, PWA, autenticación ni conexión de Supabase en el código.
 - Las decisiones de producto y arquitectura continúan documentadas aquí y en `ROADMAP.md`, `TECHNICAL_DESIGN.md`, `DESIGN_GUIDELINES.md` y `TASKS.md`.
 
@@ -50,7 +50,6 @@ El MVP se centra en experiencia de usuario, representación visual de cartas, ga
 Estas opciones no están decididas y deben resolverse antes de una implementación que dependa de ellas:
 
 - Definición detallada del reenganche y su interacción con variantes de puntuación.
-- Secuencia exacta de cierre y confirmación de ronda.
 - Qué comprobaciones de integridad pueden abortar o recuperar una partida.
 - Estrategia de sincronización offline/online para el modo físico PWA.
 
