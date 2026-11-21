@@ -49,8 +49,9 @@
 
 - [x] Crear configuración y validación de 2–4 jugadores para Chinchón físico.
 - [ ] Crear selección de baraja y juego.
-- [ ] Crear asignación inicial de turnos.
+- [x] Crear asignación inicial de turnos.
 - [ ] Permitir avanzar y retroceder turno según las reglas confirmadas.
+- [x] Permitir deshacer un avance de turno dentro de la ronda.
 - [ ] Registrar puntos por ronda.
 - [ ] Mostrar puntuación acumulada.
 - [ ] Permitir deshacer una acción válida dentro de la ronda.

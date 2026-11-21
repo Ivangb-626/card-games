@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { americanCards, DemoCard, DeckKind, spanishCards } from './cards'
-import { advancePhysicalTurn, createPhysicalGame, PhysicalGame, SetupError } from './domain/physicalGame'
+import { advancePhysicalTurn, createPhysicalGame, PhysicalGame, SetupError, undoPhysicalTurn } from './domain/physicalGame'
 import { loadPhysicalGame, savePhysicalGame } from './infrastructure/storage/physicalGameStorage'
 
 type Language = 'es' | 'en'
@@ -62,6 +62,8 @@ const copy = {
     roundLabel: 'Ronda',
     activeTurn: 'Turno de',
     nextTurn: 'Siguiente turno',
+    undoTurn: 'Deshacer turno',
+    noUndo: 'No hay turnos que deshacer.',
     activePlayer: 'Turno actual',
     scoresTitle: 'Puntuación acumulada',
     initialScore: 'Los puntos de ronda se podrán registrar en el siguiente paso.',
@@ -127,6 +129,8 @@ const copy = {
     roundLabel: 'Round',
     activeTurn: 'Turn for',
     nextTurn: 'Next turn',
+    undoTurn: 'Undo turn',
+    noUndo: 'There are no turns to undo.',
     activePlayer: 'Current turn',
     scoresTitle: 'Running score',
     initialScore: 'Round scores can be entered in the next step.',
@@ -218,6 +222,12 @@ function App() {
     setSetupError(null)
     setPhysicalGame(result.game)
     if (storageStatus === 'invalid-data' || storageStatus === 'unavailable') setStorageStatus('ready')
+  }
+
+  const undoTurn = () => {
+    if (!physicalGame) return
+    const result = undoPhysicalTurn(physicalGame)
+    if (result.ok) setPhysicalGame(result.game)
   }
 
   const setupErrorText = setupError === 'player-count'
@@ -387,7 +397,11 @@ function App() {
                         </div>
                       </section>
                       <p className="score-note">{t.initialScore}</p>
-                      <button className="button primary" type="button" onClick={() => setPhysicalGame((current) => current ? advancePhysicalTurn(current) : current)}>{t.nextTurn}<span aria-hidden="true">↗</span></button>
+                      <div className="turn-actions">
+                        <button className="button secondary" type="button" onClick={undoTurn} disabled={physicalGame.turnHistory.length === 0}>{t.undoTurn}</button>
+                        <button className="button primary" type="button" onClick={() => setPhysicalGame((current) => current ? advancePhysicalTurn(current) : current)}>{t.nextTurn}<span aria-hidden="true">↗</span></button>
+                      </div>
+                      {physicalGame.turnHistory.length === 0 && <p className="undo-note">{t.noUndo}</p>}
                     </>
                   )}
                 </div>
