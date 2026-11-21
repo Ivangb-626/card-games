@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { americanCards, DemoCard, DeckKind, spanishCards } from './cards'
-import { advancePhysicalTurn, confirmPhysicalRound, createPhysicalGame, PhysicalGame, SetupError, setPendingRoundScore, undoAllPhysicalActions, undoPhysicalAction, validatePendingRoundScores } from './domain/physicalGame'
+import { adjustPlayerScore, createPhysicalGame, PhysicalGame, SetupError } from './domain/physicalGame'
 import { loadPhysicalGame, savePhysicalGame } from './infrastructure/storage/physicalGameStorage'
 
 type Language = 'es' | 'en'
@@ -16,7 +16,7 @@ const copy = {
     primary: 'Explorar la galería',
     secondary: 'Ver modos de juego',
     physical: 'Modo físico',
-    physicalText: 'Organiza una partida presencial, incluso sin red.',
+    physicalText: 'Lleva la puntuación de una partida presencial, incluso sin red.',
     digital: 'Modo digital',
     digitalText: 'Prepara una sala privada por invitación.',
     gallery: 'Galería de cartas',
@@ -49,37 +49,20 @@ const copy = {
     cups: 'Copas',
     spades: 'Espadas',
     setupTitle: 'Configura la partida',
-    setupIntro: 'Añade de 2 a 4 jugadores para preparar una partida física de Chinchón.',
+    setupIntro: 'Añade de 2 a 4 jugadores para crear sus contadores de puntuación.',
     playerName: (number: number) => `Nombre del jugador ${number}`,
     addPlayer: 'Añadir jugador',
     removePlayer: 'Quitar',
-    selectedGame: 'Juego',
-    selectedDeck: 'Baraja',
     startGame: 'Iniciar partida',
     playerCountError: 'La partida necesita entre 2 y 4 jugadores.',
     emptyNameError: 'Escribe un nombre para cada jugador.',
     duplicateNameError: 'Cada jugador debe tener un nombre distinto.',
-    roundLabel: 'Ronda',
-    activeTurn: 'Turno de',
-    nextTurn: 'Siguiente turno',
-    undoAction: 'Deshacer última acción',
-    undoAllActions: 'Deshacer toda la ronda',
-    confirmUndoAll: 'Esto revertirá los turnos y borradores de puntuación de la ronda actual. ¿Quieres continuar?',
-    confirmUndoAllButton: 'Sí, deshacer la ronda',
-    cancelUndoAll: 'Cancelar',
-    noUndo: 'No hay acciones que deshacer.',
-    activePlayer: 'Turno actual',
-    scoresTitle: 'Puntuación acumulada',
-    roundEntryTitle: 'Puntos de esta ronda',
-    roundEntryNote: 'El borrador se guarda en este dispositivo y no se suma al total hasta confirmar el cierre de ronda.',
-    roundReviewTitle: 'Revisar cierre de ronda',
-    roundReviewNote: 'Comprueba los puntos antes de confirmarlos. Al confirmar, se sumarán al acumulado y comenzará la siguiente ronda.',
-    reviewRound: 'Revisar ronda',
-    editRound: 'Volver a editar',
-    confirmRound: 'Confirmar cierre',
-    roundHistoryTitle: 'Puntos por ronda',
-    missingRoundScores: 'Introduce un número entero para cada jugador antes de revisar el cierre.',
-    invalidScore: 'Introduce un número entero de puntos.',
+    scoresTitle: 'Marcador de Chinchón',
+    scoreLabel: 'puntos',
+    scoreNote: 'Pulsa − o + para ajustar la puntuación de cada jugador. Puedes cambiarla en cualquier momento.',
+    decreaseScore: (name: string) => `Restar un punto a ${name}`,
+    increaseScore: (name: string) => `Sumar un punto a ${name}`,
+    invalidAdjustment: 'No se pudo ajustar esta puntuación.',
     missingScorePlayer: 'No se encontró ese jugador en la partida.',
     storageLoading: 'Recuperando la partida guardada…',
     storageSaved: 'Partida guardada en este dispositivo.',
@@ -97,7 +80,7 @@ const copy = {
     primary: 'Explore the gallery',
     secondary: 'View game modes',
     physical: 'Physical mode',
-    physicalText: 'Organise an in-person game, even offline.',
+    physicalText: 'Keep score for an in-person game, even offline.',
     digital: 'Digital mode',
     digitalText: 'Prepare a private invite-only room.',
     gallery: 'Card gallery',
@@ -130,37 +113,20 @@ const copy = {
     cups: 'Cups',
     spades: 'Spades',
     setupTitle: 'Set up the game',
-    setupIntro: 'Add 2 to 4 players to prepare a physical Chinchón game.',
+    setupIntro: 'Add 2 to 4 players to create their score counters.',
     playerName: (number: number) => `Player ${number} name`,
     addPlayer: 'Add player',
     removePlayer: 'Remove',
-    selectedGame: 'Game',
-    selectedDeck: 'Deck',
     startGame: 'Start game',
     playerCountError: 'The game needs 2 to 4 players.',
     emptyNameError: 'Enter a name for every player.',
     duplicateNameError: 'Each player needs a different name.',
-    roundLabel: 'Round',
-    activeTurn: 'Turn for',
-    nextTurn: 'Next turn',
-    undoAction: 'Undo last action',
-    undoAllActions: 'Undo entire round',
-    confirmUndoAll: 'This will undo turns and score drafts from the current round. Continue?',
-    confirmUndoAllButton: 'Yes, undo the round',
-    cancelUndoAll: 'Cancel',
-    noUndo: 'There are no actions to undo.',
-    activePlayer: 'Current turn',
-    scoresTitle: 'Running score',
-    roundEntryTitle: 'Scores for this round',
-    roundEntryNote: 'This draft is saved on this device and will not affect totals until the round is confirmed.',
-    roundReviewTitle: 'Review round close',
-    roundReviewNote: 'Check the scores before confirming. Once confirmed, they will be added to the running totals and the next round will begin.',
-    reviewRound: 'Review round',
-    editRound: 'Back to editing',
-    confirmRound: 'Confirm close',
-    roundHistoryTitle: 'Scores by round',
-    missingRoundScores: 'Enter a whole number for every player before reviewing the round close.',
-    invalidScore: 'Enter a whole number of points.',
+    scoresTitle: 'Chinchón scorekeeper',
+    scoreLabel: 'points',
+    scoreNote: 'Use − or + to adjust each player’s score. You can change it at any time.',
+    decreaseScore: (name: string) => `Subtract one point from ${name}`,
+    increaseScore: (name: string) => `Add one point to ${name}`,
+    invalidAdjustment: 'This score could not be adjusted.',
     missingScorePlayer: 'That player is not in this game.',
     storageLoading: 'Restoring the saved game…',
     storageSaved: 'Game saved on this device.',
@@ -208,10 +174,7 @@ function App() {
   const [playerNames, setPlayerNames] = useState(['', ''])
   const [physicalGame, setPhysicalGame] = useState<PhysicalGame | null>(null)
   const [setupError, setSetupError] = useState<SetupError | null>(null)
-  const [scoreError, setScoreError] = useState<'invalid-score' | 'player-not-found' | null>(null)
-  const [roundCloseError, setRoundCloseError] = useState(false)
-  const [reviewingRound, setReviewingRound] = useState(false)
-  const [confirmingUndoAll, setConfirmingUndoAll] = useState(false)
+  const [scoreError, setScoreError] = useState<'invalid-adjustment' | 'player-not-found' | null>(null)
   const [storageStatus, setStorageStatus] = useState<'loading' | 'ready' | 'saved' | 'unavailable' | 'invalid-data' | 'save-failed'>('loading')
   const t = copy[language]
 
@@ -256,52 +219,14 @@ function App() {
     if (storageStatus === 'invalid-data' || storageStatus === 'unavailable') setStorageStatus('ready')
   }
 
-  const undoAction = () => {
+  const changePlayerScore = (playerId: string, amount: number) => {
     if (!physicalGame) return
-    const result = undoPhysicalAction(physicalGame)
-    if (result.ok) setPhysicalGame(result.game)
-  }
-
-  const undoAllActions = () => {
-    if (!physicalGame) return
-    const result = undoAllPhysicalActions(physicalGame)
-    if (result.ok) setPhysicalGame(result.game)
-    setConfirmingUndoAll(false)
-  }
-
-  const updateDraftScore = (playerId: string, value: string) => {
-    if (!physicalGame) return
-    const parsedScore = value === '' ? null : Number(value)
-    const result = setPendingRoundScore(physicalGame, playerId, parsedScore)
+    const result = adjustPlayerScore(physicalGame, playerId, amount)
     if (!result.ok) {
       setScoreError(result.error)
       return
     }
     setScoreError(null)
-    setPhysicalGame(result.game)
-  }
-
-  const reviewRound = () => {
-    if (!physicalGame) return
-    const result = validatePendingRoundScores(physicalGame)
-    if (!result.ok) {
-      setRoundCloseError(true)
-      return
-    }
-    setRoundCloseError(false)
-    setReviewingRound(true)
-  }
-
-  const closeRound = () => {
-    if (!physicalGame) return
-    const result = confirmPhysicalRound(physicalGame)
-    if (!result.ok) {
-      setRoundCloseError(true)
-      setReviewingRound(false)
-      return
-    }
-    setRoundCloseError(false)
-    setReviewingRound(false)
     setPhysicalGame(result.game)
   }
 
@@ -325,8 +250,8 @@ function App() {
             ? t.storageSaveError
             : null
 
-  const scoreErrorText = scoreError === 'invalid-score'
-    ? t.invalidScore
+  const scoreErrorText = scoreError === 'invalid-adjustment'
+    ? t.invalidAdjustment
     : scoreError === 'player-not-found'
       ? t.missingScorePlayer
       : null
@@ -434,10 +359,6 @@ function App() {
                       <p className="eyebrow">01 · {t.physical}</p>
                       <h1>{t.setupTitle}</h1>
                       <p>{t.setupIntro}</p>
-                      <div className="setup-options">
-                        <div><span>{t.selectedGame}</span><strong>Chinchón</strong></div>
-                        <div><span>{t.selectedDeck}</span><strong>{t.spanish}</strong></div>
-                      </div>
                       <div className="player-fields">
                         {playerNames.map((name, index) => (
                           <div className="player-field" key={index}>
@@ -463,84 +384,36 @@ function App() {
                   ) : (
                     <>
                       <div className="game-heading">
-                        <div><p className="eyebrow">{t.physical} · Chinchón</p><h1>{t.roundLabel} {physicalGame.round}</h1></div>
-                        <p className="round-status" aria-live="polite" aria-atomic="true">{t.activeTurn}<strong>{physicalGame.players[physicalGame.activePlayerIndex].name}</strong></p>
+                        <div><p className="eyebrow">{t.physical} · Chinchón</p><h1>{t.scoresTitle}</h1></div>
                       </div>
                       <section className="scoreboard" aria-labelledby="scoreboard-title">
-                        <h2 id="scoreboard-title">{t.scoresTitle}</h2>
-                        <div className="score-list">
-                          {physicalGame.players.map((player, index) => (
-                            <article className={index === physicalGame.activePlayerIndex ? 'score-player active' : 'score-player'} key={player.id}>
-                              <div><span className="score-player-name">{player.name}</span>{index === physicalGame.activePlayerIndex && <span className="turn-badge">{t.activePlayer}</span>}</div>
-                              <strong>{physicalGame.scores[player.id] ?? 0}</strong>
+                        <div className="score-counter-grid">
+                          {physicalGame.players.map((player) => (
+                            <article className="score-counter" key={player.id}>
+                              <h2 className="score-player-name">{player.name}</h2>
+                              <div className="score-counter-controls">
+                                <button
+                                  className="score-step"
+                                  type="button"
+                                  onClick={() => changePlayerScore(player.id, -1)}
+                                  aria-label={t.decreaseScore(player.name)}
+                                >−</button>
+                                <output className="score-value" aria-label={`${player.name}: ${t.scoreLabel}`} aria-live="polite">
+                                  {physicalGame.scores[player.id] ?? 0}
+                                </output>
+                                <button
+                                  className="score-step"
+                                  type="button"
+                                  onClick={() => changePlayerScore(player.id, 1)}
+                                  aria-label={t.increaseScore(player.name)}
+                                >+</button>
+                              </div>
                             </article>
                           ))}
                         </div>
+                        <p className="score-note">{t.scoreNote}</p>
                       </section>
-                      {physicalGame.roundScores.length > 0 && <section className="round-history" aria-labelledby="round-history-title">
-                        <h2 id="round-history-title">{t.roundHistoryTitle}</h2>
-                        <div className="round-history-list">
-                          {physicalGame.roundScores.map((scores, roundIndex) => (
-                            <div className="round-history-row" key={roundIndex}>
-                              <strong>{t.roundLabel} {roundIndex + 1}</strong>
-                              {physicalGame.players.map((player) => <span key={player.id}>{player.name}: {scores[player.id]}</span>)}
-                            </div>
-                          ))}
-                        </div>
-                      </section>}
-                      {!reviewingRound ? <section className="round-entry" aria-labelledby="round-entry-title">
-                        <h2 id="round-entry-title">{t.roundEntryTitle}</h2>
-                        <div className="round-entry-list">
-                          {physicalGame.players.map((player) => (
-                            <div className="round-entry-row" key={player.id}>
-                              <label htmlFor={`round-score-${player.id}`}>{player.name}</label>
-                              <input
-                                id={`round-score-${player.id}`}
-                                type="number"
-                                step="1"
-                                value={physicalGame.pendingRoundScores[player.id] ?? ''}
-                                onChange={(event) => updateDraftScore(player.id, event.target.value)}
-                                aria-label={`${t.roundEntryTitle}: ${player.name}`}
-                                aria-invalid={scoreError === 'invalid-score'}
-                                aria-describedby={scoreErrorText ? 'round-score-error' : 'round-score-note'}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                        {scoreErrorText
-                          ? <p className="form-error" id="round-score-error" role="alert">{scoreErrorText}</p>
-                          : <p className="score-note" id="round-score-note">{t.roundEntryNote}</p>}
-                        {roundCloseError && <p className="form-error" role="alert">{t.missingRoundScores}</p>}
-                      </section> : <section className="round-entry round-review" aria-labelledby="round-review-title">
-                        <h2 id="round-review-title">{t.roundReviewTitle} · {t.roundLabel} {physicalGame.round}</h2>
-                        <p className="score-note">{t.roundReviewNote}</p>
-                        <div className="round-entry-list">
-                          {physicalGame.players.map((player) => (
-                            <div className="round-review-row" key={player.id}>
-                              <span>{player.name}</span>
-                              <strong>{physicalGame.pendingRoundScores[player.id]}</strong>
-                              <small>{physicalGame.scores[player.id]} → {physicalGame.scores[player.id] + (physicalGame.pendingRoundScores[player.id] ?? 0)}</small>
-                            </div>
-                          ))}
-                        </div>
-                        {roundCloseError && <p className="form-error" role="alert">{t.missingRoundScores}</p>}
-                      </section>}
-                      <div className="turn-actions">
-                        {confirmingUndoAll ? <>
-                          <span className="undo-confirm-text" role="status">{t.confirmUndoAll}</span>
-                          <button className="button secondary" type="button" onClick={() => setConfirmingUndoAll(false)}>{t.cancelUndoAll}</button>
-                          <button className="button primary" type="button" onClick={undoAllActions}>{t.confirmUndoAllButton}</button>
-                        </> : reviewingRound ? <>
-                          <button className="button secondary" type="button" onClick={() => setReviewingRound(false)}>{t.editRound}</button>
-                          <button className="button primary" type="button" onClick={closeRound}>{t.confirmRound}<span aria-hidden="true">↗</span></button>
-                        </> : <>
-                          <button className="button secondary" type="button" onClick={undoAction} disabled={physicalGame.actionHistory.length === 0}>{t.undoAction}</button>
-                          <button className="button secondary" type="button" onClick={() => setConfirmingUndoAll(true)} disabled={physicalGame.actionHistory.length === 0}>{t.undoAllActions}</button>
-                          <button className="button secondary" type="button" onClick={reviewRound}>{t.reviewRound}</button>
-                          <button className="button primary" type="button" onClick={() => setPhysicalGame((current) => current ? advancePhysicalTurn(current) : current)}>{t.nextTurn}<span aria-hidden="true">↗</span></button>
-                        </>}
-                      </div>
-                      {!reviewingRound && physicalGame.actionHistory.length === 0 && <p className="undo-note">{t.noUndo}</p>}
+                      {scoreErrorText && <p className="form-error" role="alert">{scoreErrorText}</p>}
                     </>
                   )}
                 </div>
