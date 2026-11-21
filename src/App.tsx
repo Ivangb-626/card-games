@@ -1,5 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { americanCards, DemoCard, DeckKind, spanishCards } from './cards'
+import { advancePhysicalTurn, createPhysicalGame, PhysicalGame, SetupError } from './domain/physicalGame'
+import { loadPhysicalGame, savePhysicalGame } from './infrastructure/storage/physicalGameStorage'
 
 type Language = 'es' | 'en'
 type View = 'home' | 'physical' | 'digital' | 'gallery'
@@ -7,6 +9,7 @@ type View = 'home' | 'physical' | 'digital' | 'gallery'
 const copy = {
   es: {
     nav: ['Inicio', 'Modo físico', 'Modo digital', 'Galería'],
+    navLabel: 'Navegación principal',
     eyebrow: 'MESA ABIERTA · MVP VISUAL',
     title: 'Tus cartas, tu mesa, tu ritmo.',
     intro: 'Una base clara para jugar con cartas físicas hoy y preparar partidas digitales privadas mañana.',
@@ -33,9 +36,45 @@ const copy = {
     demoText: 'Estas cartas son datos de muestra; las reglas llegarán en una fase posterior.',
     back: 'Volver al inicio',
     open: 'Abrir',
+    demoStatus: 'Demo visual',
+    ready: 'Preparado',
+    demoValue: 'Muestra',
+    safe: 'Demo',
+    homeLabel: 'Card Games, inicio',
+    note: 'Diseñado para una acción clara por contexto.',
+    languageLabel: 'Idioma',
+    filterLabel: 'Filtrar baraja',
+    modesLabel: 'Modos disponibles',
+    heroCardsLabel: 'Cartas de demostración',
+    cups: 'Copas',
+    spades: 'Espadas',
+    setupTitle: 'Configura la partida',
+    setupIntro: 'Añade de 2 a 4 jugadores para preparar una partida física de Chinchón.',
+    playerName: (number: number) => `Nombre del jugador ${number}`,
+    addPlayer: 'Añadir jugador',
+    removePlayer: 'Quitar',
+    selectedGame: 'Juego',
+    selectedDeck: 'Baraja',
+    startGame: 'Iniciar partida',
+    playerCountError: 'La partida necesita entre 2 y 4 jugadores.',
+    emptyNameError: 'Escribe un nombre para cada jugador.',
+    duplicateNameError: 'Cada jugador debe tener un nombre distinto.',
+    roundLabel: 'Ronda',
+    activeTurn: 'Turno de',
+    nextTurn: 'Siguiente turno',
+    activePlayer: 'Turno actual',
+    scoresTitle: 'Puntuación acumulada',
+    initialScore: 'Los puntos de ronda se podrán registrar en el siguiente paso.',
+    storageLoading: 'Recuperando la partida guardada…',
+    storageSaved: 'Partida guardada en este dispositivo.',
+    storageUnavailable: 'No se puede acceder al almacenamiento local. La partida solo estará disponible mientras esta pestaña permanezca abierta.',
+    storageInvalid: 'El guardado local no se puede leer. Inicia una partida nueva para sustituirlo.',
+    storageSaveError: 'No se pudo guardar la partida. Seguirá disponible en esta pestaña.',
+    footer: 'Responsive · teclado · contraste AA',
   },
   en: {
     nav: ['Home', 'Physical mode', 'Digital mode', 'Gallery'],
+    navLabel: 'Main navigation',
     eyebrow: 'OPEN TABLE · VISUAL MVP',
     title: 'Your cards, your table, your pace.',
     intro: 'A clear foundation for playing with physical cards today and preparing private digital games tomorrow.',
@@ -62,19 +101,68 @@ const copy = {
     demoText: 'These cards are sample data; rules arrive in a later phase.',
     back: 'Back to home',
     open: 'Open',
+    demoStatus: 'Visual demo',
+    ready: 'Ready',
+    demoValue: 'Sample',
+    safe: 'Demo',
+    homeLabel: 'Card Games, home',
+    note: 'Designed around one clear action at a time.',
+    languageLabel: 'Language',
+    filterLabel: 'Filter deck',
+    modesLabel: 'Available modes',
+    heroCardsLabel: 'Demo cards',
+    cups: 'Cups',
+    spades: 'Spades',
+    setupTitle: 'Set up the game',
+    setupIntro: 'Add 2 to 4 players to prepare a physical Chinchón game.',
+    playerName: (number: number) => `Player ${number} name`,
+    addPlayer: 'Add player',
+    removePlayer: 'Remove',
+    selectedGame: 'Game',
+    selectedDeck: 'Deck',
+    startGame: 'Start game',
+    playerCountError: 'The game needs 2 to 4 players.',
+    emptyNameError: 'Enter a name for every player.',
+    duplicateNameError: 'Each player needs a different name.',
+    roundLabel: 'Round',
+    activeTurn: 'Turn for',
+    nextTurn: 'Next turn',
+    activePlayer: 'Current turn',
+    scoresTitle: 'Running score',
+    initialScore: 'Round scores can be entered in the next step.',
+    storageLoading: 'Restoring the saved game…',
+    storageSaved: 'Game saved on this device.',
+    storageUnavailable: 'Local storage is unavailable. This game will only remain available while this tab is open.',
+    storageInvalid: 'The local save cannot be read. Start a new game to replace it.',
+    storageSaveError: 'The game could not be saved. It will remain available in this tab.',
+    footer: 'Responsive · keyboard · AA contrast',
   },
 } as const
 
-function Card({ card }: { card: DemoCard }) {
+const cardLabels: Record<Language, Record<string, string>> = {
+  es: {
+    'As de oros': 'As de oros', 'Siete de copas': 'Siete de copas', 'Sota de bastos': 'Sota de bastos', 'Rey de espadas': 'Rey de espadas',
+  },
+  en: {
+    'As de oros': 'Ace of coins', 'Siete de copas': 'Seven of cups', 'Sota de bastos': 'Jack of clubs', 'Rey de espadas': 'King of swords',
+  },
+}
+
+const suitLabels: Record<Language, Record<string, string>> = {
+  es: { Oros: 'Oros', Copas: 'Copas', Bastos: 'Bastos', Espadas: 'Espadas', Hearts: 'Corazones', Diamonds: 'Diamantes', Clubs: 'Tréboles', Spades: 'Picas' },
+  en: { Oros: 'Coins', Copas: 'Cups', Bastos: 'Clubs', Espadas: 'Swords' },
+}
+
+function Card({ card, label, suit }: { card: DemoCard; label: string; suit: string }) {
   return (
-    <article className={`playing-card ${card.accent}`} aria-label={card.label} tabIndex={0}>
+    <article className={`playing-card ${card.accent}`} aria-label={label} tabIndex={0}>
       <div className="card-corner">
         <strong>{card.value}</strong>
         <span aria-hidden="true">{card.suitSymbol}</span>
       </div>
       <div className="card-emblem" aria-hidden="true">{card.suitSymbol}</div>
       <div className="card-footer">
-        <span>{card.suit}</span>
+        <span>{suit}</span>
         <strong>{card.value}</strong>
       </div>
     </article>
@@ -85,7 +173,30 @@ function App() {
   const [language, setLanguage] = useState<Language>('es')
   const [view, setView] = useState<View>('home')
   const [deck, setDeck] = useState<DeckKind | 'all'>('all')
+  const [playerNames, setPlayerNames] = useState(['', ''])
+  const [physicalGame, setPhysicalGame] = useState<PhysicalGame | null>(null)
+  const [setupError, setSetupError] = useState<SetupError | null>(null)
+  const [storageStatus, setStorageStatus] = useState<'loading' | 'ready' | 'saved' | 'unavailable' | 'invalid-data' | 'save-failed'>('loading')
   const t = copy[language]
+
+  useEffect(() => {
+    document.documentElement.lang = language
+  }, [language])
+
+  useEffect(() => {
+    const result = loadPhysicalGame()
+    if (result.ok) {
+      setPhysicalGame(result.game)
+      setStorageStatus('ready')
+    } else {
+      setStorageStatus(result.error)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!physicalGame || !['ready', 'saved', 'save-failed'].includes(storageStatus)) return
+    setStorageStatus(savePhysicalGame(physicalGame) ? 'saved' : 'save-failed')
+  }, [physicalGame, storageStatus])
 
   const cards = useMemo(() => {
     if (deck === 'spanish') return spanishCards
@@ -98,14 +209,45 @@ function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
+  const startPhysicalGame = () => {
+    const result = createPhysicalGame(playerNames)
+    if (!result.ok) {
+      setSetupError(result.error)
+      return
+    }
+    setSetupError(null)
+    setPhysicalGame(result.game)
+    if (storageStatus === 'invalid-data' || storageStatus === 'unavailable') setStorageStatus('ready')
+  }
+
+  const setupErrorText = setupError === 'player-count'
+    ? t.playerCountError
+    : setupError === 'empty-name'
+      ? t.emptyNameError
+      : setupError === 'duplicate-name'
+        ? t.duplicateNameError
+        : null
+
+  const storageStatusText = storageStatus === 'loading'
+    ? t.storageLoading
+    : storageStatus === 'saved'
+      ? t.storageSaved
+      : storageStatus === 'unavailable'
+        ? t.storageUnavailable
+        : storageStatus === 'invalid-data'
+          ? t.storageInvalid
+          : storageStatus === 'save-failed'
+            ? t.storageSaveError
+            : null
+
   return (
     <div className="app-shell">
       <header className="topbar">
-        <button className="brand" onClick={() => navigate('home')} aria-label="Card Games, inicio">
+        <button className="brand" onClick={() => navigate('home')} aria-label={t.homeLabel}>
           <span className="brand-mark" aria-hidden="true">✦</span>
           <span>Card Games</span>
         </button>
-        <nav className="main-nav" aria-label="Navegación principal">
+        <nav className="main-nav" aria-label={t.navLabel}>
           {t.nav.map((label, index) => {
             const target = ['home', 'physical', 'digital', 'gallery'][index] as View
             return (
@@ -122,10 +264,10 @@ function App() {
         </nav>
         <div className="topbar-actions">
           <span className="status-dot" aria-hidden="true" />
-          <span className="status-label">MVP demo</span>
-          <div className="language-switcher" role="group" aria-label="Idioma">
-            <button className={language === 'es' ? 'language active' : 'language'} onClick={() => setLanguage('es')}>ES</button>
-            <button className={language === 'en' ? 'language active' : 'language'} onClick={() => setLanguage('en')}>EN</button>
+          <span className="status-label">{t.demoStatus}</span>
+          <div className="language-switcher" role="group" aria-label={t.languageLabel}>
+            <button className={language === 'es' ? 'language active' : 'language'} onClick={() => setLanguage('es')} aria-pressed={language === 'es'}>ES</button>
+            <button className={language === 'en' ? 'language active' : 'language'} onClick={() => setLanguage('en')} aria-pressed={language === 'en'}>EN</button>
           </div>
         </div>
       </header>
@@ -144,19 +286,19 @@ function App() {
                 </div>
                 <div className="hero-note">
                   <span className="note-icon" aria-hidden="true">⌁</span>
-                  <span>Diseñado para una acción clara por contexto.</span>
+                  <span>{t.note}</span>
                 </div>
               </div>
-              <div className="hero-art" aria-label="Cartas de demostración">
+              <div className="hero-art" aria-label={t.heroCardsLabel}>
                 <div className="sun-orbit orbit-one" />
                 <div className="sun-orbit orbit-two" />
                 <div className="hero-card card-back tilt-left" aria-hidden="true"><span>✦</span></div>
-                <div className="hero-card playing-card warm tilt-main"><div className="card-corner"><strong>7</strong><span>♥</span></div><div className="card-emblem">♥</div><div className="card-footer"><span>Copas</span><strong>7</strong></div></div>
-                <div className="hero-card playing-card cool tilt-right"><div className="card-corner"><strong>K</strong><span>♠</span></div><div className="card-emblem">♠</div><div className="card-footer"><span>Spades</span><strong>K</strong></div></div>
+                <div className="hero-card playing-card warm tilt-main"><div className="card-corner"><strong>7</strong><span>♥</span></div><div className="card-emblem">♥</div><div className="card-footer"><span>{t.cups}</span><strong>7</strong></div></div>
+                <div className="hero-card playing-card cool tilt-right"><div className="card-corner"><strong>K</strong><span>♠</span></div><div className="card-emblem">♠</div><div className="card-footer"><span>{t.spades}</span><strong>K</strong></div></div>
               </div>
             </section>
 
-            <section className="mode-grid" aria-label="Modos disponibles">
+            <section className="mode-grid" aria-label={t.modesLabel}>
               <button className="mode-card physical-mode" onClick={() => navigate('physical')}>
                 <div className="mode-icon">♧</div>
                 <div><p className="eyebrow">01 · {t.physical}</p><h2>{t.physical}</h2><p>{t.physicalText}</p></div><span className="arrow" aria-hidden="true">↗</span>
@@ -188,29 +330,86 @@ function App() {
             {view === 'gallery' ? (
               <>
                 <div className="subpage-heading"><p className="eyebrow">{t.demo}</p><h1>{t.gallery}</h1><p>{t.demoText}</p></div>
-                <div className="filter-row" role="group" aria-label="Filtrar baraja">
-                  {(['all', 'spanish', 'american'] as const).map((option) => <button key={option} className={deck === option ? 'filter active' : 'filter'} onClick={() => setDeck(option)}>{option === 'all' ? t.all : option === 'spanish' ? t.spanish : t.american}</button>)}
+                <div className="filter-row" role="group" aria-label={t.filterLabel}>
+                  {(['all', 'spanish', 'american'] as const).map((option) => <button key={option} className={deck === option ? 'filter active' : 'filter'} onClick={() => setDeck(option)} aria-pressed={deck === option}>{option === 'all' ? t.all : option === 'spanish' ? t.spanish : t.american}</button>)}
                 </div>
-                <div className="gallery-grid">{cards.map((card) => <Card key={card.id} card={card} />)}</div>
+                <div className="gallery-grid">{cards.map((card) => <Card key={card.id} card={card} label={cardLabels[language][card.label] ?? card.label} suit={suitLabels[language][card.suit] ?? card.suit} />)}</div>
               </>
-            ) : (
-              <div className="demo-panel">
-                <p className="eyebrow">{view === 'physical' ? '01 · ' + t.physical : '02 · ' + t.digital}</p>
-                <h1>{view === 'physical' ? t.physical : t.digital}</h1>
-                <p>{view === 'physical' ? t.physicalText : t.digitalText}</p>
-                <div className="demo-checks">
-                  <div><span className="check">✓</span><span>{t.lobby}</span><strong>Ready</strong></div>
-                  <div><span className="check">✓</span><span>{t.turn}</span><strong>Demo</strong></div>
-                  <div><span className="check">✓</span><span>{t.reconnect}</span><strong>Safe</strong></div>
+            ) : view === 'physical' ? (
+                <div className="physical-panel">
+                  {storageStatusText && <p className={storageStatus === 'saved' ? 'storage-message success' : 'storage-message'} role={storageStatus === 'saved' ? 'status' : 'alert'}>{storageStatusText}</p>}
+                  {!physicalGame ? (
+                    <>
+                      <p className="eyebrow">01 · {t.physical}</p>
+                      <h1>{t.setupTitle}</h1>
+                      <p>{t.setupIntro}</p>
+                      <div className="setup-options">
+                        <div><span>{t.selectedGame}</span><strong>Chinchón</strong></div>
+                        <div><span>{t.selectedDeck}</span><strong>{t.spanish}</strong></div>
+                      </div>
+                      <div className="player-fields">
+                        {playerNames.map((name, index) => (
+                          <div className="player-field" key={index}>
+                            <label htmlFor={`player-name-${index}`}>{t.playerName(index + 1)}</label>
+                            <div>
+                              <input
+                                id={`player-name-${index}`}
+                                value={name}
+                                onChange={(event) => setPlayerNames((current) => current.map((item, itemIndex) => itemIndex === index ? event.target.value : item))}
+                                aria-invalid={Boolean(setupError)}
+                                aria-describedby={setupErrorText ? 'setup-error' : undefined}
+                                autoComplete="off"
+                              />
+                              {playerNames.length > 2 && <button className="remove-player" type="button" onClick={() => setPlayerNames((current) => current.filter((_, itemIndex) => itemIndex !== index))}>{t.removePlayer}</button>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      {playerNames.length < 4 && <button className="text-button" type="button" onClick={() => setPlayerNames((current) => [...current, ''])}>+ {t.addPlayer}</button>}
+                      {setupErrorText && <p className="form-error" id="setup-error" role="alert">{setupErrorText}</p>}
+                      <button className="button primary start-game" type="button" onClick={startPhysicalGame} disabled={storageStatus === 'loading'}>{t.startGame}<span aria-hidden="true">↗</span></button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="game-heading">
+                        <div><p className="eyebrow">{t.physical} · Chinchón</p><h1>{t.roundLabel} {physicalGame.round}</h1></div>
+                        <p className="round-status" aria-live="polite" aria-atomic="true">{t.activeTurn}<strong>{physicalGame.players[physicalGame.activePlayerIndex].name}</strong></p>
+                      </div>
+                      <section className="scoreboard" aria-labelledby="scoreboard-title">
+                        <h2 id="scoreboard-title">{t.scoresTitle}</h2>
+                        <div className="score-list">
+                          {physicalGame.players.map((player, index) => (
+                            <article className={index === physicalGame.activePlayerIndex ? 'score-player active' : 'score-player'} key={player.id}>
+                              <div><span className="score-player-name">{player.name}</span>{index === physicalGame.activePlayerIndex && <span className="turn-badge">{t.activePlayer}</span>}</div>
+                              <strong>0</strong>
+                            </article>
+                          ))}
+                        </div>
+                      </section>
+                      <p className="score-note">{t.initialScore}</p>
+                      <button className="button primary" type="button" onClick={() => setPhysicalGame((current) => current ? advancePhysicalTurn(current) : current)}>{t.nextTurn}<span aria-hidden="true">↗</span></button>
+                    </>
+                  )}
                 </div>
-                <button className="button primary" onClick={() => navigate('gallery')}>{t.open} {t.gallery}<span aria-hidden="true">↗</span></button>
-              </div>
-            )}
+              ) : (
+                <div className="demo-panel">
+                  <p className="eyebrow">02 · {t.digital}</p>
+                  <h1>{t.digital}</h1>
+                  <p>{t.digitalText}</p>
+                  <div className="demo-checks">
+                    <div><span className="check" aria-hidden="true">✓</span><span>{t.lobby}</span><strong>{t.ready}</strong></div>
+                    <div><span className="check" aria-hidden="true">✓</span><span>{t.turn}</span><strong>{t.demoValue}</strong></div>
+                    <div><span className="check" aria-hidden="true">✓</span><span>{t.reconnect}</span><strong>{t.safe}</strong></div>
+                  </div>
+                  <button className="button primary" onClick={() => navigate('gallery')}>{t.open} {t.gallery}<span aria-hidden="true">↗</span></button>
+                </div>
+              )
+            }
           </section>
         )}
       </main>
 
-      <footer className="footer"><span>Card Games · foundation 01</span><span>Responsive · teclado · contraste AA</span></footer>
+      <footer className="footer"><span>Card Games · foundation 01</span><span>{t.footer}</span></footer>
     </div>
   )
 }

@@ -18,6 +18,33 @@ La prioridad inicial es una interfaz funcional bien diseñada. Las mejoras visua
 
 ## Layout responsive
 
+### Matriz de soporte
+
+La interfaz soporta desde 320 px hasta escritorio amplio. Los cortes describen el layout, no limitan el zoom del navegador.
+
+| Clase | Ancho CSS | Comportamiento principal |
+|---|---:|---|
+| Móvil | 320–520 px | Una columna, controles apilados cuando sea necesario y acciones al alcance del pulgar. No se oculta información imprescindible del juego. |
+| Tablet | 521–850 px | Se priorizan mesa y cartas propias; los paneles secundarios pueden pasar debajo de la mesa. |
+| Escritorio | 851–1439 px | Mesa amplia con jugadores e información de ronda visibles en paralelo. |
+| Escritorio amplio | 1440 px o más | El contenido queda centrado y limitado a 1440 px; no se estiran las cartas ni los párrafos. |
+
+Los puntos de corte vigentes en CSS son 520 px y 850 px. La hoja usa un ancho máximo de 1440 px.
+
+### Pantallas y estados mínimos
+
+| Flujo | Estados que debe representar | Acción principal | Tratamiento de error |
+|---|---|---|---|
+| Configuración | Sin jugadores, 2–4 jugadores válidos, nombre vacío o repetido, configuración lista | Añadir/editar jugadores e iniciar | Error asociado al campo; no se inicia con datos inválidos |
+| Lobby | Sin sala, esperando jugadores, listo para comenzar, sala expirada | Comenzar o volver | Explicar si falta un requisito y conservar los datos introducidos |
+| Mesa y turno | Turno propio, turno ajeno, jugador ausente, ronda en curso | Acción válida para el estado actual | Rechazar la acción con motivo junto al control |
+| Puntuación y cierre | Puntuación en edición, resumen de ronda, confirmación, ronda confirmada, partida finalizada | Revisar y confirmar el resumen | Mantener la edición reversible hasta confirmar; la secuencia exacta de cierre sigue pendiente |
+| Invitación y acceso | Invitación válida, código inválido, invitación caducada, acceso rechazado | Unirse o volver | Indicar el problema y ofrecer volver a inicio |
+| Conexión | Conectado, reconectando, ausente, pausa indefinida, reingreso | Reintentar o reanudar | Conservar asiento y estado; mostrar las acciones disponibles al anfitrión |
+| Continuidad física | Estado local cargado, guardado, error al recuperar, uso offline | Continuar o iniciar partida | No reemplazar un guardado recuperable sin explicar el problema |
+
+Los estados sin backend pueden mostrarse con datos de demostración, pero deben identificarse como tales. La interfaz no debe presentar una sala de ejemplo como sala real.
+
 ### Escritorio
 
 - Mesa central amplia.
@@ -116,6 +143,9 @@ Diseñar explícitamente:
 - Feedback visual además de sonido.
 - Contenido no dependiente de temporización visual cuando sea posible.
 - Textos disponibles inicialmente en español e inglés.
+- El idioma seleccionado también se refleja en `html[lang]` y en los nombres accesibles.
+- Todo control debe conservar un foco visible y un área táctil cómoda; los filtros y selectores deben anunciar su estado seleccionado.
+- Los errores se asocian al campo o acción correspondiente y no se comunican solo mediante color.
 
 ## Propuestas pendientes
 
