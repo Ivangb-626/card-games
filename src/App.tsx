@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import type { KeyboardEvent, TouchEvent, WheelEvent } from 'react'
 import { americanCards, DemoCard, DeckKind, spanishCards } from './cards'
 import { adjustPlayerScore, createPhysicalGame, PhysicalGame, SetupError } from './domain/physicalGame'
 import { loadPhysicalGame, savePhysicalGame } from './infrastructure/storage/physicalGameStorage'
@@ -59,7 +60,7 @@ const copy = {
     duplicateNameError: 'Cada jugador debe tener un nombre distinto.',
     scoresTitle: 'Marcador de Chinchón',
     scoreLabel: 'puntos',
-    scoreNote: 'Pulsa − o + para ajustar la puntuación de cada jugador. Puedes cambiarla en cualquier momento.',
+    scoreNote: 'Usa − o +, la rueda del ratón o desliza arriba y abajo sobre el marcador.',
     decreaseScore: (name: string) => `Restar un punto a ${name}`,
     increaseScore: (name: string) => `Sumar un punto a ${name}`,
     invalidAdjustment: 'No se pudo ajustar esta puntuación.',
@@ -123,7 +124,7 @@ const copy = {
     duplicateNameError: 'Each player needs a different name.',
     scoresTitle: 'Chinchón scorekeeper',
     scoreLabel: 'points',
-    scoreNote: 'Use − or + to adjust each player’s score. You can change it at any time.',
+    scoreNote: 'Use − or +, the mouse wheel, or swipe up and down on a score counter.',
     decreaseScore: (name: string) => `Subtract one point from ${name}`,
     increaseScore: (name: string) => `Add one point to ${name}`,
     invalidAdjustment: 'This score could not be adjusted.',
@@ -175,6 +176,8 @@ function App() {
   const [physicalGame, setPhysicalGame] = useState<PhysicalGame | null>(null)
   const [setupError, setSetupError] = useState<SetupError | null>(null)
   const [scoreError, setScoreError] = useState<'invalid-adjustment' | 'player-not-found' | null>(null)
+  const touchStartY = useRef<number | null>(null)
+  const suppressTouchClick = useRef(false)
   const [storageStatus, setStorageStatus] = useState<'loading' | 'ready' | 'saved' | 'unavailable' | 'invalid-data' | 'save-failed'>('loading')
   const t = copy[language]
 
@@ -230,6 +233,40 @@ function App() {
     setPhysicalGame(result.game)
   }
 
+  const changeScoreWithWheel = (event: WheelEvent<HTMLElement>, playerId: string) => {
+    event.preventDefault()
+    if (event.deltaY !== 0) changePlayerScore(playerId, event.deltaY < 0 ? 1 : -1)
+  }
+
+  const startScoreSwipe = (event: TouchEvent<HTMLElement>) => {
+    touchStartY.current = event.touches[0]?.clientY ?? null
+  }
+
+  const finishScoreSwipe = (event: TouchEvent<HTMLElement>, playerId: string) => {
+    const endY = event.changedTouches[0]?.clientY
+    const startY = touchStartY.current
+    touchStartY.current = null
+    if (startY === null || endY === undefined) return
+    const distance = startY - endY
+    if (Math.abs(distance) < 36) return
+
+    event.preventDefault()
+    suppressTouchClick.current = true
+    window.setTimeout(() => { suppressTouchClick.current = false }, 400)
+    changePlayerScore(playerId, distance > 0 ? 1 : -1)
+  }
+
+  const handleCounterKeyDown = (event: KeyboardEvent<HTMLElement>, playerId: string) => {
+    if (event.target !== event.currentTarget) return
+    if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      changePlayerScore(playerId, 1)
+    } else if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      changePlayerScore(playerId, -1)
+    }
+  }
+
   const setupErrorText = setupError === 'player-count'
     ? t.playerCountError
     : setupError === 'empty-name'
@@ -257,7 +294,7 @@ function App() {
       : null
 
   return (
-    <div className="app-shell">
+    <div className={view === 'physical' && physicalGame ? 'app-shell scorekeeper-shell' : 'app-shell'}>
       <header className="topbar">
         <button className="brand" onClick={() => navigate('home')} aria-label={t.homeLabel}>
           <span className="brand-mark" aria-hidden="true">✦</span>
@@ -352,7 +389,7 @@ function App() {
                 <div className="gallery-grid">{cards.map((card) => <Card key={card.id} card={card} label={cardLabels[language][card.label] ?? card.label} suit={suitLabels[language][card.suit] ?? card.suit} />)}</div>
               </>
             ) : view === 'physical' ? (
-                <div className="physical-panel">
+                <div className={physicalGame ? 'physical-panel scorekeeper-panel' : 'physical-panel'}>
                   {storageStatusText && <p className={storageStatus === 'saved' ? 'storage-message success' : 'storage-message'} role={storageStatus === 'saved' ? 'status' : 'alert'}>{storageStatusText}</p>}
                   {!physicalGame ? (
                     <>
@@ -387,9 +424,25 @@ function App() {
                         <div><p className="eyebrow">{t.physical} · Chinchón</p><h1>{t.scoresTitle}</h1></div>
                       </div>
                       <section className="scoreboard" aria-labelledby="scoreboard-title">
-                        <div className="score-counter-grid">
+                        <div className={`score-counter-grid players-${physicalGame.players.length}`}>
                           {physicalGame.players.map((player) => (
-                            <article className="score-counter" key={player.id}>
+                            <article
+                              className="score-counter"
+                              key={player.id}
+                              tabIndex={0}
+                              role="group"
+                              aria-label={`${player.name}: ${physicalGame.scores[player.id] ?? 0} ${t.scoreLabel}. ${t.scoreNote}`}
+                              onWheel={(event) => changeScoreWithWheel(event, player.id)}
+                              onTouchStart={startScoreSwipe}
+                              onTouchEnd={(event) => finishScoreSwipe(event, player.id)}
+                              onClickCapture={(event) => {
+                                if (suppressTouchClick.current) {
+                                  event.preventDefault()
+                                  event.stopPropagation()
+                                }
+                              }}
+                              onKeyDown={(event) => handleCounterKeyDown(event, player.id)}
+                            >
                               <h2 className="score-player-name">{player.name}</h2>
                               <div className="score-counter-controls">
                                 <button

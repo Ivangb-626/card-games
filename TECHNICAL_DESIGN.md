@@ -89,7 +89,7 @@ El estado de juego debe ser inmutable o reproducible. Cada acción válida se gu
 
 Las acciones rechazadas deben conservar el estado original y devolver una razón visible. Los cambios de interfaz nunca deben alterar la puntuación directamente.
 
-El modo físico usa un modelo simple: jugadores y una puntuación entera por jugador. El dominio permite ajustar el contador en incrementos de un punto hacia arriba o abajo, sin estado de turno ni ronda. El almacenamiento local persiste los valores; al migrar guardados anteriores, conserva los acumulados y suma los borradores de puntuación que estuvieran pendientes.
+El modo físico usa un modelo simple: jugadores y una puntuación entera por jugador. El dominio permite ajustar el contador en incrementos de un punto hacia arriba o abajo, sin estado de turno ni ronda. La interfaz de marcador ocupa la ventana completa; botones, rueda del ratón, gesto vertical táctil y flechas del teclado envían ajustes de un punto al dominio. El almacenamiento local persiste los valores; al migrar guardados anteriores, conserva los acumulados y suma los borradores de puntuación que estuvieran pendientes.
 
 ## Deshacer
 

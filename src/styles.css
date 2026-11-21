@@ -136,6 +136,30 @@ h1 { max-width: 620px; margin-bottom: 24px; font-size: clamp(42px, 5.2vw, 78px);
 .score-step:focus-visible { outline: 3px solid var(--yellow); outline-offset: 3px; }
 .score-value { min-width: 56px; color: var(--yellow); text-align: center; font: 600 26px 'DM Mono', monospace; font-variant-numeric: tabular-nums; }
 .score-note { margin: 18px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.scorekeeper-shell { display: flex; width: 100%; max-width: none; height: 100dvh; min-height: 100dvh; flex-direction: column; padding: 0; overflow: hidden; }
+.scorekeeper-shell .topbar, .scorekeeper-shell .footer { display: none; }
+.scorekeeper-shell main { display: flex; min-height: 0; flex: 1; }
+.scorekeeper-shell .subpage { position: relative; width: 100%; min-height: 0; height: 100%; padding: 0; }
+.scorekeeper-shell .back-link { position: absolute; z-index: 2; top: max(10px, env(safe-area-inset-top)); left: max(16px, env(safe-area-inset-left)); min-height: 40px; padding: 8px 10px; border-radius: 8px; background: rgba(16,19,29,.78); }
+.scorekeeper-shell .scorekeeper-panel { display: flex; width: 100%; max-width: none; height: 100%; flex-direction: column; gap: 12px; margin: 0; padding: 58px 18px 14px; overflow: hidden; border: 0; border-radius: 0; background: #10131d; }
+.scorekeeper-panel .storage-message.success { display: none; }
+.scorekeeper-panel .storage-message:not(.success) { position: absolute; top: 8px; right: 12px; max-width: min(55vw, 420px); margin: 0; font-size: 10px; }
+.scorekeeper-panel .game-heading { flex: none; margin: 0; }
+.scorekeeper-panel .game-heading .eyebrow { margin-bottom: 3px; }
+.scorekeeper-panel .game-heading h1 { font-size: clamp(20px, 3vw, 30px); }
+.scorekeeper-panel .scoreboard { display: flex; min-height: 0; flex: 1; flex-direction: column; }
+.scorekeeper-panel .score-counter-grid { min-height: 0; flex: 1; grid-template-rows: minmax(0, 1fr); gap: 10px; margin: 0; }
+.scorekeeper-panel .score-counter-grid.players-3,
+.scorekeeper-panel .score-counter-grid.players-4 { grid-template-rows: repeat(2, minmax(0, 1fr)); }
+.scorekeeper-panel .score-counter-grid.players-3 .score-counter:last-child { grid-column: 1 / -1; }
+.scorekeeper-panel .score-counter { display: flex; min-width: 0; min-height: 0; flex-direction: column; align-items: center; justify-content: space-evenly; gap: 10px; padding: clamp(10px, 2vw, 24px); overflow: hidden; touch-action: none; user-select: none; }
+.scorekeeper-panel .score-player-name { max-width: 100%; font-size: clamp(16px, 2.4vw, 25px); text-align: center; }
+.scorekeeper-panel .score-counter-controls { width: min(100%, 560px); grid-template-columns: minmax(56px, 1fr) auto minmax(56px, 1fr); gap: clamp(10px, 3vw, 28px); }
+.scorekeeper-panel .score-step { width: 100%; height: clamp(54px, 12vh, 104px); border-radius: 14px; font-size: clamp(32px, 6vw, 60px); }
+.scorekeeper-panel .score-value { min-width: clamp(76px, 14vw, 180px); font-size: clamp(38px, 8vw, 80px); }
+.scorekeeper-panel .score-counter:focus-visible { outline: 3px solid var(--yellow); outline-offset: -5px; }
+.scorekeeper-panel .score-note { flex: none; margin: 0; text-align: center; font-size: 11px; }
+.scorekeeper-panel .form-error { flex: none; margin: 0; text-align: center; }
 .demo-checks { margin: 32px 0; border-top: 1px solid var(--line); }
 .demo-checks > div { display: flex; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
 .demo-checks strong { margin-left: auto; color: var(--yellow); font: 10px 'DM Mono', monospace; text-transform: uppercase; }
@@ -169,6 +193,19 @@ h1 { max-width: 620px; margin-bottom: 24px; font-size: clamp(42px, 5.2vw, 78px);
   .demo-panel { margin-top: 65px; padding: 26px; }
   .physical-panel { margin-top: 50px; padding: 23px; }
   .score-counter-grid { grid-template-columns: 1fr; }
+  .scorekeeper-shell .scorekeeper-panel { gap: 8px; padding: 56px 10px max(10px, env(safe-area-inset-bottom)); }
+  .scorekeeper-panel .score-counter-grid,
+  .scorekeeper-panel .score-counter-grid.players-3,
+  .scorekeeper-panel .score-counter-grid.players-4 { grid-template-columns: 1fr; grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 7px; }
+  .scorekeeper-panel .score-counter-grid.players-3 { grid-template-rows: repeat(3, minmax(0, 1fr)); }
+  .scorekeeper-panel .score-counter-grid.players-4 { grid-template-rows: repeat(4, minmax(0, 1fr)); }
+  .scorekeeper-panel .score-counter-grid.players-3 .score-counter:last-child { grid-column: auto; }
+  .scorekeeper-panel .score-counter { gap: 4px; padding: 5px 10px; border-radius: 12px; }
+  .scorekeeper-panel .score-player-name { font-size: clamp(15px, 4vw, 20px); }
+  .scorekeeper-panel .score-counter-controls { width: min(100%, 480px); grid-template-columns: minmax(56px, 1fr) auto minmax(56px, 1fr); gap: 12px; }
+  .scorekeeper-panel .score-step { height: clamp(46px, 8vh, 68px); border-radius: 10px; font-size: 36px; }
+  .scorekeeper-panel .score-value { min-width: clamp(64px, 16vw, 110px); font-size: clamp(32px, 8vw, 48px); }
+  .scorekeeper-panel .score-note { font-size: 10px; }
   .footer { display: block; line-height: 1.8; }
 }
 @media (prefers-reduced-motion: reduce) {
