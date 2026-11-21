@@ -38,7 +38,7 @@ Los puntos de corte vigentes en CSS son 520 px y 850 px. La hoja usa un ancho m�
 | Configuración | Sin jugadores, 2–4 jugadores válidos, nombre vacío o repetido, configuración lista | Añadir/editar jugadores e iniciar | Error asociado al campo; no se inicia con datos inválidos |
 | Lobby | Sin sala, esperando jugadores, listo para comenzar, sala expirada | Comenzar o volver | Explicar si falta un requisito y conservar los datos introducidos |
 | Mesa y turno | Turno propio, turno ajeno, jugador ausente, ronda en curso | Acción válida para el estado actual | Rechazar la acción con motivo junto al control |
-| Marcador físico | 2–4 contadores de puntuación, ajustables en cualquier momento | Sumar o restar un punto | El número se actualiza al instante y permanece guardado en el dispositivo |
+| Marcador físico | Pantalla completa con 2–4 contadores amplios, ajustables en cualquier momento | Botones +/−, rueda del ratón, deslizamiento vertical o flechas arriba/abajo | El número se actualiza al instante y permanece guardado en el dispositivo; las tarjetas ocupan el espacio disponible y se apilan en móvil |
 | Puntuación y cierre digital | Puntuación en edición, resumen de ronda, confirmación, ronda confirmada, partida finalizada | Revisar y confirmar el resumen | Mantener la edición reversible hasta confirmar; al confirmar se suman los puntos, avanza la ronda y se limpian los borradores |
 | Invitación y acceso | Invitación válida, código inválido, invitación caducada, acceso rechazado | Unirse o volver | Indicar el problema y ofrecer volver a inicio |
 | Conexión | Conectado, reconectando, ausente, pausa indefinida, reingreso | Reintentar o reanudar | Conservar asiento y estado; mostrar las acciones disponibles al anfitrión |

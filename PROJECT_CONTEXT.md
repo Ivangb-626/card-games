@@ -8,7 +8,7 @@ El MVP se centra en experiencia de usuario, representación visual de cartas, ga
 
 ## Estado actual
 - La aplicación usa React, TypeScript y Vite; incluye navegación SPA y una galería visual de cartas españolas y americanas.
-- El modo físico de Chinchón se centra en llevar el marcador: permite configurar 2–4 jugadores y subir o bajar la puntuación individual en cualquier momento. No muestra turnos ni rondas y guarda los contadores en el dispositivo.
+- El modo físico de Chinchón se centra en llevar el marcador: permite configurar 2–4 jugadores y subir o bajar la puntuación individual en cualquier momento con botones, rueda del ratón, deslizamiento vertical o flechas del teclado. La pantalla de contadores ocupa toda la ventana, con una fila alta por jugador en móvil. No muestra turnos ni rondas y guarda los contadores en el dispositivo.
 - El modo digital sigue siendo una demostración. No hay motores completos de reglas, persistencia local, PWA, autenticación ni conexión de Supabase en el código.
 - Las decisiones de producto y arquitectura continúan documentadas aquí y en `ROADMAP.md`, `TECHNICAL_DESIGN.md`, `DESIGN_GUIDELINES.md` y `TASKS.md`.
 
