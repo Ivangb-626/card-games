@@ -52,6 +52,7 @@
 - [x] Crear asignación inicial de turnos.
 - [ ] Permitir avanzar y retroceder turno según las reglas confirmadas.
 - [x] Permitir deshacer un avance de turno dentro de la ronda.
+- [x] Capturar borradores de puntos por jugador sin aplicarlos a los totales antes del cierre.
 - [ ] Registrar puntos por ronda.
 - [ ] Mostrar puntuación acumulada.
 - [ ] Permitir deshacer una acción válida dentro de la ronda.
