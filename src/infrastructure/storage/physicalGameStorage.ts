@@ -1,14 +1,23 @@
-import { PhysicalGame, PhysicalPlayer } from '../../domain/physicalGame'
+import {
+  emptyRoundScores,
+  MAX_PLAYERS,
+  MIN_PLAYERS,
+  PhysicalGame,
+  PhysicalPlayer,
+  PhysicalRoundRecord,
+  SCORE_FLOOR,
+  zeroRejoins,
+} from '../../domain/physicalGame'
 
 const STORAGE_KEY = 'card-games:physical-game'
-const STORAGE_VERSION = 6
+const STORAGE_VERSION = 8
 
 export type PhysicalGameLoadResult =
   | { ok: true; game: PhysicalGame | null }
   | { ok: false; error: 'unavailable' | 'invalid-data' }
 
 function readPlayers(value: unknown): PhysicalPlayer[] | null {
-  if (!Array.isArray(value) || value.length < 2 || value.length > 4) return null
+  if (!Array.isArray(value) || value.length < MIN_PLAYERS || value.length > MAX_PLAYERS) return null
 
   const players = value as Partial<PhysicalPlayer>[]
   if (!players.every((player) =>
@@ -44,11 +53,21 @@ function readPendingScoreMap(value: unknown, players: PhysicalPlayer[]): Record<
   return Object.fromEntries(players.map((player) => [player.id, candidate[player.id] as number | null]))
 }
 
-function createZeroScoreGame(players: PhysicalPlayer[]): PhysicalGame {
+function createFirstRoundGame(players: PhysicalPlayer[], scores: Record<string, number>): PhysicalGame {
   return {
     players,
-    scores: Object.fromEntries(players.map((player) => [player.id, 0])),
+    scores: Object.fromEntries(players.map((player) => [player.id, Math.max(SCORE_FLOOR, scores[player.id])])),
+    round: 1,
+    roundScores: emptyRoundScores(players),
+    roundClosed: false,
+    rounds: [],
+    rejoins: zeroRejoins(players),
+    ended: false,
   }
+}
+
+function createZeroScoreGame(players: PhysicalPlayer[]): PhysicalGame {
+  return createFirstRoundGame(players, Object.fromEntries(players.map((player) => [player.id, 0])))
 }
 
 function migrateLegacyGame(value: unknown, includePendingScores: boolean): PhysicalGame | null {
@@ -69,7 +88,63 @@ function migrateLegacyGame(value: unknown, includePendingScores: boolean): Physi
   }))
   if (Object.values(scores).some((score) => score === null)) return null
 
-  return { players, scores: scores as Record<string, number> }
+  return createFirstRoundGame(players, scores as Record<string, number>)
+}
+
+function readRoundRecords(value: unknown, players: PhysicalPlayer[]): PhysicalRoundRecord[] | null {
+  if (!Array.isArray(value)) return null
+  const ids = new Set(players.map((player) => player.id))
+  const records: PhysicalRoundRecord[] = []
+  for (const item of value) {
+    if (!item || typeof item !== 'object') return null
+    const candidate = item as { round?: unknown; points?: unknown; totals?: unknown; rejoins?: unknown }
+    const points = readPendingScoreMap(candidate.points, players)
+    const totals = readScoreMap(candidate.totals, players)
+    if (!points || !totals || !Number.isSafeInteger(candidate.round) || !Array.isArray(candidate.rejoins)) return null
+    const rejoins = candidate.rejoins as { playerId?: unknown; score?: unknown }[]
+    if (!rejoins.every((rejoin) => Boolean(rejoin)
+      && typeof rejoin.playerId === 'string'
+      && ids.has(rejoin.playerId)
+      && Number.isSafeInteger(rejoin.score))) return null
+    records.push({
+      round: candidate.round as number,
+      points,
+      totals,
+      rejoins: rejoins.map((rejoin) => ({ playerId: rejoin.playerId as string, score: rejoin.score as number })),
+    })
+  }
+  return records
+}
+
+/** Lee el formato por rondas; la versión 7 aún no guardaba resumen ni reenganches. */
+function readRoundGame(value: object, withHistory: boolean): PhysicalGame | null {
+  const stored = value as {
+    players?: unknown
+    scores?: unknown
+    round?: unknown
+    roundScores?: unknown
+    roundClosed?: unknown
+    rounds?: unknown
+    rejoins?: unknown
+    ended?: unknown
+  }
+  const players = readPlayers(stored.players)
+  if (!players) return null
+  const scores = readScoreMap(stored.scores, players)
+  const roundScores = readPendingScoreMap(stored.roundScores, players)
+  if (!scores || !roundScores) return null
+  if (Object.values(scores).some((score) => score < SCORE_FLOOR)) return null
+  if (!Number.isSafeInteger(stored.round) || (stored.round as number) < 1) return null
+  if (typeof stored.roundClosed !== 'boolean') return null
+
+  const rounds = withHistory ? readRoundRecords(stored.rounds, players) : []
+  const rejoins = withHistory ? readScoreMap(stored.rejoins, players) : zeroRejoins(players)
+  if (!rounds || !rejoins || Object.values(rejoins).some((count) => count < 0)) return null
+
+  if (stored.ended !== undefined && typeof stored.ended !== 'boolean') return null
+  const ended = stored.ended === true
+
+  return { players, scores, round: stored.round as number, roundScores, roundClosed: stored.roundClosed, rounds, rejoins, ended }
 }
 
 export function loadPhysicalGame(): PhysicalGameLoadResult {
@@ -102,13 +177,18 @@ export function loadPhysicalGame(): PhysicalGameLoadResult {
     return game ? { ok: true, game } : { ok: false, error: 'invalid-data' }
   }
 
-  if (record.version === STORAGE_VERSION && record.game && typeof record.game === 'object') {
+  if (record.version === 6 && record.game && typeof record.game === 'object') {
     const stored = record.game as { players?: unknown; scores?: unknown }
     const players = readPlayers(stored.players)
     const scores = players ? readScoreMap(stored.scores, players) : null
     return players && scores
-      ? { ok: true, game: { players, scores } }
+      ? { ok: true, game: createFirstRoundGame(players, scores) }
       : { ok: false, error: 'invalid-data' }
+  }
+
+  if ((record.version === 7 || record.version === STORAGE_VERSION) && record.game && typeof record.game === 'object') {
+    const game = readRoundGame(record.game, record.version === STORAGE_VERSION)
+    return game ? { ok: true, game } : { ok: false, error: 'invalid-data' }
   }
 
   return { ok: false, error: 'invalid-data' }
@@ -117,6 +197,15 @@ export function loadPhysicalGame(): PhysicalGameLoadResult {
 export function savePhysicalGame(game: PhysicalGame): boolean {
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: STORAGE_VERSION, game }))
+    return true
+  } catch {
+    return false
+  }
+}
+
+export function clearPhysicalGame(): boolean {
+  try {
+    window.localStorage.removeItem(STORAGE_KEY)
     return true
   } catch {
     return false

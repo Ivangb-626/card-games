@@ -29,7 +29,8 @@ Un agente no debe sustituir estas decisiones por suposiciones:
 - Modos físico y digital privado por invitación.
 - Barajas española y americana.
 - Chinchón primero y Texas Hold'em como siguiente hito digital.
-- Chinchón para 2-4 jugadores y 7 cartas por jugador.
+- Chinchón para 2-4 jugadores y 7 cartas por jugador. El marcador físico admite además 5 o 6 jugadores, con un aviso de que no es lo tradicional.
+- Chinchón digital: baraja de 40 cartas más 2 comodines (7 y sota seguidos), cierre con como mucho una carta suelta de 5 o menos, ligar manual simultáneo, tope de 70 por ronda y validación en la Edge Function `chinchon-game` con las manos en secreto.
 - Póker Texas Hold'em para 2-9 jugadores.
 - Invitados admitidos con nombre temporal e identidad local persistente.
 - Login opcional futuro para amigos y perfiles.

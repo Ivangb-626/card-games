@@ -1,3 +1,14 @@
+-- Sustituye el borrador de salas aplicado en 20261121223623 por el esquema que usa la aplicación.
+-- El borrador no era compatible con el cliente (otras columnas y funciones), así que no podía contener
+-- salas creadas desde la app. Las salas caducan a los 30 minutos.
+
+drop function if exists public.create_private_room(text);
+drop function if exists public.join_private_room(text, text);
+drop table if exists public.room_checkpoints, public.room_events, public.room_invites, public.room_members, public.rooms cascade;
+drop function if exists private.is_room_member(uuid);
+
+-- Esquema de salas de la aplicación (antes 202611210001_create_private_rooms.sql).
+
 create table if not exists public.rooms (
   id uuid primary key default gen_random_uuid(),
   code text not null unique,

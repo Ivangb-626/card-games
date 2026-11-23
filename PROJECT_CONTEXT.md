@@ -8,8 +8,8 @@ El MVP se centra en experiencia de usuario, representación visual de cartas, ga
 
 ## Estado actual
 - La aplicación usa React, TypeScript y Vite; incluye navegación SPA y una galería visual de cartas españolas y americanas.
-- El modo físico de Chinchón se centra en llevar el marcador: permite configurar 2–4 jugadores y subir o bajar la puntuación individual en cualquier momento con botones, rueda del ratón, deslizamiento vertical o flechas del teclado. La pantalla de contadores ocupa toda la ventana, con una fila alta por jugador en móvil. No muestra turnos ni rondas y guarda los contadores en el dispositivo.
-- El modo digital sigue siendo una demostración. No hay motores completos de reglas, persistencia local, PWA, autenticación ni conexión de Supabase en el código.
+- El modo físico de Chinchón lleva el marcador por rondas: permite configurar 2–4 jugadores (o 5–6 tras confirmar un aviso de que no es lo tradicional), muestra el número de ronda y pide los puntos de cada jugador en juego con teclado numérico, botones, rueda del ratón, deslizamiento vertical o flechas. Cuando están todos, aparece «Cerrar ronda», que suma los puntos al total acumulado (mínimo -50). Quien llega a -50 gana; quien llega a 101 queda fuera y, entre el cierre de una ronda y el inicio de la siguiente, puede reengancharse con la puntuación más alta de los jugadores en juego. La pantalla ocupa toda la ventana y guarda la partida en el dispositivo. No muestra turnos.
+- El modo digital permite crear una sala con código, unirse como invitado y jugar una partida de Chinchón completa para 2–4 jugadores. Una Edge Function de Supabase valida las jugadas y mantiene las manos en secreto; las rondas se sincronizan en tiempo real y se puntúan con las reglas del modo físico. Quedan pendientes la pausa por ausencia, deshacer y el resto de puntos de la Fase 4 de `TASKS.md`. No hay PWA ni login.
 - Las decisiones de producto y arquitectura continúan documentadas aquí y en `ROADMAP.md`, `TECHNICAL_DESIGN.md`, `DESIGN_GUIDELINES.md` y `TASKS.md`.
 
 ## Decisiones confirmadas
@@ -18,14 +18,17 @@ El MVP se centra en experiencia de usuario, representación visual de cartas, ga
 |---|---|
 | Producto | Aplicación de cartas con modo físico y modo digital privado por invitación. |
 | Nombre temporal | Card Games. El nombre definitivo queda pendiente. |
-| Modalidad física | Marcador manual de Chinchón para 2–4 jugadores, con contadores individuales ajustables en cualquier momento; debe funcionar sin red mediante PWA. |
+| Modalidad física | Marcador de Chinchón por rondas para 2–4 jugadores, ampliable a 5–6 con aviso; debe funcionar sin red mediante PWA. |
 | Modalidad digital | Chinchón será el primer hito y Texas Hold'em el siguiente hito digital. |
 | Barajas | Baraja española y baraja americana. |
-| Chinchón | 2-4 jugadores, 7 cartas por jugador y reglas configurables para admitir variantes. |
-| Cierre en chinchón | Cierre si todas las cartas están combinadas o quedan como máximo 5 puntos sin combinar. |
-| Bonificaciones | Chinchón natural: -50 puntos. Cierre quedándose con cero: -10 puntos. |
-| Puntuación | Se contabilizan los puntos de las cartas que quedan sin combinar. |
-| Fin de partida | Termina cuando, al cierre de una ronda, solo queda un jugador por debajo de 100 puntos. Al llegar a 100, un jugador puede reengancharse a la puntuación del jugador con más puntos. |
+| Chinchón | 2-4 jugadores (el marcador físico admite 5–6 con aviso), 7 cartas por jugador y reglas configurables para admitir variantes. |
+| Cierre en chinchón | Se aparta una carta y, con las otras 7, solo puede quedar una carta suelta de 5 o menos (nunca un comodín). |
+| Baraja de chinchón | 40 cartas españolas más 2 comodines; el 7 y la sota van seguidos. Como mucho un comodín por combinación. Un comodín suelto suma 25. |
+| Ligar | Tras el cierre, los demás colocan a la vez sus cartas sueltas en las combinaciones de quien cerró y pulsan «Listo». Al terminar la ronda se muestran todas las manos. |
+| Bonificaciones | Chinchón natural (sin comodín): -50 puntos. Cierre quedándose con cero: -10 puntos. |
+| Puntuación | Se contabilizan los puntos de las cartas que quedan sin combinar, con un máximo de 70 por ronda. |
+| Rondas digitales | La siguiente ronda la inicia el anfitrión o dos jugadores no anfitriones con «Listo» (uno si solo hay uno). |
+| Fin de partida | 100 puntos es el máximo para seguir en juego; con 101 o más, el jugador queda fuera. Termina cuando, al cierre de una ronda, solo queda un jugador con 100 puntos o menos, o cuando alguien llega a -50. Quien queda fuera puede reengancharse justo antes de la siguiente ronda con la puntuación del jugador en juego con más puntos, siempre que queden al menos dos jugadores en juego. |
 | Póker | Texas Hold'em digital básico completo: ciegas, fichas virtuales, reparto automático, turnos, apuestas, all-in y resolución automática de manos; 2-9 jugadores. Torneos, recompensas y variantes quedan fuera del alcance inicial. |
 | Invitados | Nombre temporal sin registro obligatorio e identidad persistida localmente en el mismo dispositivo para reincorporarse. |
 | Invitaciones | Código corto y enlace compartible con validez de 24 horas; QR queda como mejora futura. |

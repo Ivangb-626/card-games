@@ -15,12 +15,13 @@ flowchart LR
   App --> Views[Inicio · configuración física · mesa inicial · modo digital demo · galería]
 ```
 
-No hay router, API, backend, autenticación, motor de reglas de Chinchón ni conexión de Supabase en el frontend. El modo físico permite configurar 2–4 jugadores, avanzar/deshacer turnos, recuperar la mesa local y guardar borradores de puntos por jugador. Los borradores no se aplican a los totales porque aún falta acordar y construir la confirmación de cierre. El modo digital continúa como demostración; las cartas son datos estáticos.
+No hay router. El modo digital usa Supabase: sesión anónima para invitados, funciones SQL para crear o entrar en salas, Realtime para sincronizar y la Edge Function `chinchon-game` como árbitro de la partida (ver `TECHNICAL_DESIGN.md`, «Chinchón digital»). La interfaz de la sala y la mesa está en `src/ui/DigitalChinchonRoom.tsx`; el acceso a datos, en `src/infrastructure/supabase/`. El modo físico permite configurar 2–4 jugadores (hasta 6 con aviso), introducir los puntos de cada ronda, cerrarla para acumularlos en los totales (mínimo -50, eliminación a 101), reengancharse entre rondas y recuperar la partida local. El modo digital continúa como demostración; las cartas son datos estáticos.
 
 ## Stack y publicación observados
 
 - React 18 y TypeScript 5 con Vite 6.
-- `npm run dev`, `npm run check` y `npm run build` están definidos en `package.json`.
+- `npm run dev`, `npm run check`, `npm run build`, `npm test` (Vitest) y `npm run sync:edge` (copia el motor de dominio a la Edge Function) están definidos en `package.json`.
+- El despliegue de migraciones y de la Edge Function se describe en `docs/DEPLOY_SUPABASE.md`.
 - GitHub Pages publica con el modo Vite `pages`, que usa `base: '/card-games/'`. Los demás modos usan `/`.
 - Existe un workflow de Pages que compila con Node 20. No detecta tests ni lint.
 - Vercel `card-games` es el proyecto canónico acordado. Despliega el repositorio desde `main`; `card-games-ewao` se conserva sin cambios como proyecto duplicado hasta recibir una decisión específica.

@@ -104,7 +104,49 @@ El estado de juego debe ser inmutable o reproducible. Cada acción válida se gu
 
 Las acciones rechazadas deben conservar el estado original y devolver una razón visible. Los cambios de interfaz nunca deben alterar la puntuación directamente.
 
-El modo físico usa un modelo simple: jugadores y una puntuación entera por jugador. El dominio permite ajustar el contador en incrementos de un punto hacia arriba o abajo, sin estado de turno ni ronda. La interfaz de marcador ocupa la ventana completa; botones, rueda del ratón, gesto vertical táctil y flechas del teclado envían ajustes de un punto al dominio. El almacenamiento local persiste los valores; al migrar guardados anteriores, conserva los acumulados y suma los borradores de puntuación que estuvieran pendientes.
+El modo físico usa un modelo de marcador por rondas, sin turnos: jugadores, total acumulado por jugador, número de ronda, puntos de la ronda en curso (`null` mientras no se introducen) y si la ronda está cerrada. Reglas del dominio (`src/domain/physicalGame.ts`):
+
+- Los puntos de ronda solo se editan con la ronda abierta y para jugadores en juego (total menor que 101).
+- Los puntos de una ronda van de 0 a 70 (un valor mayor se recorta a 70) y, en negativo, solo pueden ser -10 o -50. Los ajustes de −/+ se mueven dentro de 0–70.
+- `closeRound` exige los puntos de todos los jugadores en juego y suma cada uno al total, con un mínimo de -50.
+- Llegar a -50 da la victoria y termina la partida. Llegar a 101 deja al jugador fuera.
+- Con la ronda cerrada, sin ganador por -50 y con al menos dos jugadores en juego, un jugador fuera puede reengancharse: su total pasa a ser el mayor total entre los jugadores en juego. Al empezar la siguiente ronda ya no puede hacerlo hasta el siguiente cierre. Se cuentan los reenganches de cada jugador y se muestran entre rondas.
+- Si al cerrar una ronda solo queda un jugador en juego, no hay opción de reenganche: la partida termina y ese jugador gana. Si no queda ninguno, gana el total más bajo.
+- Cada cierre guarda un resumen de la ronda (puntos, totales y reenganches posteriores). Al terminar la partida se muestra una pantalla con el ganador, la clasificación, el resumen ronda a ronda y los botones «Nueva partida» y «Volver al inicio». Este resumen pertenece solo a la partida en curso y se borra al empezar otra; no es un historial ni estadísticas entre partidas.
+
+La interfaz solo envía acciones al dominio y muestra el resultado. Ofrece botones rápidos −10, −50 y 0 (fijan ese valor), +5 y +10 (suman) y «Pasarse», que solo aparece cuando los puntos que faltan para llegar a 101 caben en una ronda y fija exactamente esa cantidad. Tras usar −10, −50, 0 o «Pasarse», cualquier otro cambio de ese jugador en la misma ronda pide confirmación; +5 y +10 no la activan. Durante la ronda y entre rondas, «Acabar partida» pide confirmación y lleva a la pantalla de resumen sin ganador, destacando a quien tiene menos puntos sin presentarlo como ganador. Si se acaba con una ronda abierta, sus puntos se descartan y el resumen solo incluye las rondas cerradas. El almacenamiento local (versión 8) persiste la ronda en curso, el resumen y los reenganches; la versión 7 se migra con el resumen vacío y las anteriores se migran a la ronda 1 conservando los totales (acotados a -50) y sumando los borradores pendientes de versiones antiguas.
+
+## Chinchón digital
+
+Primer hito jugable del modo digital. Lo que falta está en `TASKS.md`, Fase 4.
+
+### Reglas
+
+- Baraja española de 40 cartas (sin 8 ni 9) más 2 comodines; el 7 y la sota van seguidos. 2–4 jugadores, 7 cartas cada uno.
+- Combinaciones: grupos del mismo número (3–4 cartas) o escaleras del mismo palo (3 o más). Como mucho un comodín por combinación y al menos dos cartas reales.
+- En su turno, el jugador roba del mazo o del descarte y después descarta o cierra. Si el mazo se agota, se rebaraja el descarte dejando visible la última carta.
+- Cerrar: se aparta una carta boca abajo y, con las otras 7, solo puede quedar una carta suelta que no sea comodín y valga 5 o menos.
+- Puntos de quien cierra: −50 con chinchón (7 seguidas del mismo palo, sin comodín), −10 sin cartas sueltas o el valor de su carta suelta.
+- Ligar: tras el cierre, los demás colocan a la vez sus cartas sueltas en las combinaciones de quien cerró y pulsan «Listo». Pueden devolver una carta mientras no rompa una combinación que otro haya seguido ampliando.
+- Los demás suman sus puntos sueltos, con la mejor combinación posible de las cartas no ligadas. El comodín suelto vale 25 y las figuras 10.
+- El marcador entre rondas reutiliza las reglas del modo físico (`physicalGame.ts`): tope de 70 por ronda, mínimo de −50 (gana), fuera a partir de 101 y reenganche entre rondas si quedan al menos dos jugadores en juego.
+- La siguiente ronda empieza cuando el anfitrión la inicia o cuando dos jugadores no anfitriones pulsan «Listo» (uno si solo hay uno). Empieza el siguiente jugador en juego de la mesa.
+- Al terminar cada ronda se muestran todas las manos.
+
+### Arquitectura
+
+- Motor puro y compartido: `src/domain/chinchon.ts` (cartas y combinaciones), `src/domain/physicalGame.ts` (marcador) y `src/domain/digitalChinchon.ts` (estado de la partida, jugadas y vistas). No tienen dependencias e importan con extensión `.ts` para que Deno los resuelva.
+- Árbitro: la Edge Function `supabase/functions/chinchon-game` autentica al invitado, aplica la jugada con el motor y llama a `save_chinchon_game`, que guarda de forma atómica y con versión optimista.
+- `npm run sync:edge` copia el motor a `supabase/functions/_shared/`; un test falla si las copias no coinciden.
+- Datos:
+  - `room_games` guarda el estado completo y solo es accesible con `service_role`.
+  - `room_game_public` guarda la vista común y la pueden leer los miembros de la sala.
+  - `room_game_hands` guarda una fila por jugador que solo puede leer su dueño.
+  - Las dos últimas, junto con `rooms` y `room_members`, se sincronizan con Supabase Realtime.
+- Cada jugada válida queda en `room_events` con jugador, tipo, datos y versión; la carta con la que se cierra no se registra porque está boca abajo.
+- Una vez empezada la partida, solo pueden volver a entrar en la sala quienes ya eran miembros. Cada jugada mantiene viva la sala 30 minutos más.
+- Reconexión básica: el dispositivo recuerda la última sala y, al recargar, vuelve a entrar con la misma identidad local.
+- Despliegue: `docs/DEPLOY_SUPABASE.md`.
 
 ## Deshacer
 

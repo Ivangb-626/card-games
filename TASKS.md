@@ -48,55 +48,74 @@
 ## Fase 2 — Modo físico
 
 - [x] Crear configuración y validación de 2–4 jugadores para Chinchón físico.
+- [x] Permitir 5–6 jugadores en el marcador físico, con aviso de que no es lo tradicional.
 - [x] Mostrar un contador individual por jugador.
 - [x] Permitir sumar o restar un punto a cualquier contador en cualquier momento.
 - [x] Guardar y recuperar los contadores en el almacenamiento local.
 - [x] Migrar puntuaciones guardadas anteriormente al marcador simple.
+- [x] Llevar el marcador por rondas: indicador de ronda, puntos por ronda y «Cerrar ronda».
+- [x] Acumular totales con mínimo -50 (victoria) y eliminación a 101.
+- [x] Permitir el reenganche entre rondas con la puntuación más alta en juego.
 - [ ] Verificar el marcador en móvil desde 320 px, teclado y lector de pantalla.
 - [ ] Configurar PWA y validar operación offline del modo físico.
 
-**Criterio de salida:** una partida física permite gestionar jugadores y corregir sus puntuaciones directamente, sin turnos ni flujo de rondas.
+**Criterio de salida:** una partida física permite gestionar jugadores, introducir y cerrar rondas, acumular puntuaciones y reengancharse entre rondas, sin turnos.
 
 ## Fase 3 — Motores de juego
 
 - [ ] Crear entidades comunes de partida, ronda y turno.
 - [ ] Crear interfaz común de motor de juego.
-- [ ] Añadir reglas básicas acordadas de chinchón.
-- [ ] Implementar el motor de chinchón como primer hito.
+- [x] Añadir reglas básicas acordadas de chinchón.
+- [x] Implementar el motor de chinchón como primer hito.
 - [ ] Preparar el motor extensible de Texas Hold'em.
 - [ ] Añadir Texas Hold'em completo como segundo hito digital.
 - [ ] Cubrir ciegas, fichas, apuestas, turnos, all-in y resolución automática en Texas Hold'em inicial.
 - [ ] Excluir torneos, recompensas y variantes del alcance inicial de Texas Hold'em.
 - [ ] Añadir casos de empates o cierre de ronda.
-- [ ] Prohibir acciones fuera de turno.
-- [ ] Añadir pruebas unitarias de reglas normales.
-- [ ] Añadir pruebas de casos límite y acciones inválidas.
+- [x] Prohibir acciones fuera de turno.
+- [x] Añadir pruebas unitarias de reglas normales.
+- [x] Añadir pruebas de casos límite y acciones inválidas.
 
 **Criterio de salida:** ambos motores pueden ejecutar casos acordados y rechazar acciones incompatibles.
 
 ## Fase 4 — Partida digital privada
 
-- [ ] Crear una sala privada.
+- [x] Crear una sala privada.
 - [ ] Generar invitación mediante código corto y enlace compartible con validez de 24 horas.
-- [ ] Validar acceso por invitación.
-- [ ] Permitir entrar como invitado.
-- [ ] Sincronizar estado de la sala.
-- [ ] Sincronizar acciones y turnos.
+- [x] Validar acceso por invitación.
+- [x] Permitir entrar como invitado.
+- [x] Sincronizar estado de la sala.
+- [x] Sincronizar acciones y turnos.
 - [ ] Mostrar estado de conexión.
 - [ ] Mostrar jugadores como ausentes fuera del turno o por elección.
 - [ ] Permitir reincorporación al asiento.
 - [ ] Pausar indefinidamente la partida si no vuelve en 30 segundos.
 - [ ] Permitir al anfitrión jugar temporalmente por el jugador ausente o expulsarlo.
-- [ ] Mantener las mismas mecánicas para anfitrión y demás jugadores.
-- [ ] Evitar duplicar jugadores al reconectar.
+- [x] Mantener las mismas mecánicas para anfitrión y demás jugadores.
+- [x] Evitar duplicar jugadores al reconectar.
 - [ ] Persistir eventos, checkpoints y estado mínimo necesario en Supabase Postgres.
-- [ ] Sincronizar salas mediante Supabase Realtime.
-- [ ] Aplicar RLS para restringir cada sala a sus jugadores.
+- [x] Sincronizar salas mediante Supabase Realtime.
+- [x] Aplicar RLS para restringir cada sala a sus jugadores.
 - [ ] Recuperar puntos y estado para continuar desde la siguiente ronda.
 - [ ] Caducar salas a los 30 minutos.
 - [ ] Añadir español e inglés.
 
 **Criterio de salida:** dos clientes pueden unirse, jugar, desconectarse y reincorporarse sin perder el estado.
+
+### Pendiente del Chinchón digital (tras el primer hito jugable)
+
+- [ ] Desplegar las migraciones y la Edge Function siguiendo `docs/DEPLOY_SUPABASE.md` y probar una partida real con dos o más dispositivos.
+- [ ] Enlace compartible con el código de la sala (además del código).
+- [ ] Estado de conexión real de cada jugador (presencia de Realtime).
+- [ ] Pausa automática a los 30 segundos sin volver y reanudación.
+- [ ] Que el anfitrión pueda jugar temporalmente por un ausente o expulsarlo.
+- [ ] Deshacer dentro de la ronda y corrección del anfitrión tras el cierre, con checkpoints por ronda (sin exponer manos ocultas en `room_checkpoints`).
+- [ ] Acabar la partida a mano desde la sala digital, como en el modo físico.
+- [ ] Expulsar o sustituir a quien abandona antes de empezar.
+- [ ] Reordenar la mano manualmente (ahora se agrupa automáticamente por combinaciones).
+- [ ] Animaciones de robo y descarte, y avisos de turno.
+- [ ] Confirmar si se permite más de un comodín por combinación (ahora, como mucho uno).
+- [ ] Revisar la interfaz de la mesa en móvil, teclado y lector de pantalla.
 
 ## Fase 5 — Pulido
 

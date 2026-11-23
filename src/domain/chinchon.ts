@@ -1,46 +1,37 @@
+// Reglas de cartas de Chinchón. Sin dependencias: se comparte tal cual con la Edge Function.
+
 export type SpanishSuit = 'oros' | 'copas' | 'espadas' | 'bastos'
 
 export type ChinchonCard = {
   id: string
-  suit: SpanishSuit
+  suit: SpanishSuit | 'comodin'
+  /** 1–7, 10 (sota), 11 (caballo), 12 (rey); 0 en los comodines. */
   rank: number
 }
 
-export type ChinchonPlayer = {
-  id: string
-  name: string
-  hand: ChinchonCard[]
-  score: number
+export type HandArrangement = {
+  melds: ChinchonCard[][]
+  loose: ChinchonCard[]
+  points: number
 }
 
-export type ChinchonRound = {
-  players: ChinchonPlayer[]
-  activePlayerIndex: number
-  deck: ChinchonCard[]
-  discard: ChinchonCard[]
-  hasDrawn: boolean
-  roundNumber: number
-  status: 'playing' | 'closed'
-  winnerId: string | null
-}
-
-export type ChinchonActionResult =
-  | { ok: true; round: ChinchonRound }
-  | { ok: false; error: 'invalid-player' | 'invalid-turn' | 'invalid-card' | 'cannot-close' | 'deck-empty' }
-
-const suits: SpanishSuit[] = ['oros', 'copas', 'espadas', 'bastos']
+export const SPANISH_SUITS: SpanishSuit[] = ['oros', 'copas', 'espadas', 'bastos']
+/** En la baraja de 40 cartas el 7 y la sota van seguidos. */
+export const RANK_ORDER = [1, 2, 3, 4, 5, 6, 7, 10, 11, 12]
+export const JOKER_COUNT = 2
+export const JOKER_POINTS = 25
+export const HAND_SIZE = 7
+export const MAX_CLOSING_LOOSE_POINTS = 5
+export const CLOSE_BONUS = -10
+export const CHINCHON_BONUS = -50
 
 export function createSpanishDeck(): ChinchonCard[] {
-  return suits.flatMap((suit) =>
-    [1, 2, 3, 4, 5, 6, 7, 10, 11, 12].map((rank) => ({
-      id: `${suit}-${rank}`,
-      suit,
-      rank,
-    })),
-  )
+  const cards = SPANISH_SUITS.flatMap((suit) => RANK_ORDER.map((rank) => ({ id: `${suit}-${rank}`, suit, rank })))
+  const jokers = Array.from({ length: JOKER_COUNT }, (_, index) => ({ id: `comodin-${index + 1}`, suit: 'comodin' as const, rank: 0 }))
+  return [...cards, ...jokers]
 }
 
-export function shuffleCards(cards: ChinchonCard[], random: () => number = Math.random): ChinchonCard[] {
+export function shuffleCards<T>(cards: T[], random: () => number = Math.random): T[] {
   const shuffled = [...cards]
   for (let index = shuffled.length - 1; index > 0; index -= 1) {
     const swapIndex = Math.floor(random() * (index + 1))
@@ -49,194 +40,133 @@ export function shuffleCards(cards: ChinchonCard[], random: () => number = Math.
   return shuffled
 }
 
-export function createChinchonRound(playerIdsAndNames: Array<{ id: string; name: string }>, roundNumber = 1): ChinchonRound {
-  const deck = shuffleCards(createSpanishDeck())
-  const players = playerIdsAndNames.map((player) => ({
-    id: player.id,
-    name: player.name,
-    hand: [] as ChinchonCard[],
-    score: 0,
-  }))
-  for (let dealt = 0; dealt < 7; dealt += 1) {
-    for (const player of players) {
-      const card = deck.shift()
-      if (card) player.hand.push(card)
-    }
-  }
-  const firstDiscard = deck.shift()
-  return {
-    players,
-    activePlayerIndex: 0,
-    deck,
-    discard: firstDiscard ? [firstDiscard] : [],
-    hasDrawn: false,
-    roundNumber,
-    status: 'playing',
-    winnerId: null,
-  }
+export function isJoker(card: ChinchonCard): boolean {
+  return card.suit === 'comodin'
 }
 
-function cardPoints(card: ChinchonCard): number {
+export function cardPoints(card: ChinchonCard): number {
+  if (isJoker(card)) return JOKER_POINTS
   return card.rank >= 10 ? 10 : card.rank
 }
 
-function cardKey(card: ChinchonCard): string {
-  return card.id
+function rankPosition(card: ChinchonCard): number {
+  return RANK_ORDER.indexOf(card.rank)
 }
 
-function isValidMeld(cards: ChinchonCard[]): boolean {
+/**
+ * Combinación válida: 3 o más cartas, como mucho un comodín y al menos dos cartas reales.
+ * Grupo: mismo número (máximo 4 cartas). Escalera: mismo palo y seguidas; el comodín cubre un hueco o un extremo.
+ */
+export function isValidMeld(cards: ChinchonCard[]): boolean {
   if (cards.length < 3) return false
-  if (cards.every((card) => card.rank === cards[0].rank)) return true
-  if (!cards.every((card) => card.suit === cards[0].suit)) return false
-  const ranks = [...new Set(cards.map((card) => card.rank))].sort((a, b) => a - b)
-  if (ranks.length !== cards.length) return false
-  return ranks.every((rank, index) => index === 0 || rank === ranks[index - 1] + 1)
+  const jokers = cards.filter(isJoker).length
+  const real = cards.filter((card) => !isJoker(card))
+  if (jokers > 1 || real.length < 2) return false
+
+  if (real.every((card) => card.rank === real[0].rank)) {
+    return cards.length <= SPANISH_SUITS.length && new Set(real.map((card) => card.suit)).size === real.length
+  }
+
+  if (!real.every((card) => card.suit === real[0].suit)) return false
+  const positions = real.map(rankPosition).sort((first, second) => first - second)
+  if (new Set(positions).size !== positions.length) return false
+  const span = positions[positions.length - 1] - positions[0] + 1
+  return span - real.length <= jokers && cards.length <= RANK_ORDER.length
 }
 
-function combinations(items: ChinchonCard[], size: number): ChinchonCard[][] {
+function sumPoints(cards: ChinchonCard[]): number {
+  return cards.reduce((total, card) => total + cardPoints(card), 0)
+}
+
+function combinationsOf(items: ChinchonCard[], size: number): ChinchonCard[][] {
   if (size === 0) return [[]]
   if (size > items.length) return []
-  const result: ChinchonCard[][] = []
-  const visit = (start: number, chosen: ChinchonCard[]) => {
-    if (chosen.length === size) {
-      result.push([...chosen])
-      return
-    }
-    for (let index = start; index <= items.length - (size - chosen.length); index += 1) {
-      chosen.push(items[index])
-      visit(index + 1, chosen)
-      chosen.pop()
-    }
-  }
-  visit(0, [])
-  return result
+  const [first, ...rest] = items
+  return [
+    ...combinationsOf(rest, size - 1).map((combination) => [first, ...combination]),
+    ...combinationsOf(rest, size),
+  ]
 }
 
-export function minimumUnmatchedPoints(hand: ChinchonCard[]): number {
-  const best = { value: hand.reduce((sum, card) => sum + cardPoints(card), 0) }
-  const search = (remaining: ChinchonCard[], unmatchedPoints: number) => {
-    if (unmatchedPoints >= best.value) return
+/**
+ * Recorre todas las formas de repartir la mano en combinaciones y cartas sueltas
+ * y devuelve la de menos puntos sueltos (a igualdad, la de menos cartas sueltas)
+ * entre las que cumplen `accept`.
+ */
+function searchArrangement(
+  hand: ChinchonCard[],
+  accept: (loose: ChinchonCard[]) => boolean,
+): HandArrangement | null {
+  let best: HandArrangement | null = null
+
+  const visit = (remaining: ChinchonCard[], melds: ChinchonCard[][], loose: ChinchonCard[]) => {
     if (remaining.length === 0) {
-      best.value = unmatchedPoints
+      if (!accept(loose)) return
+      const points = sumPoints(loose)
+      if (!best || points < best.points || (points === best.points && loose.length < best.loose.length)) {
+        best = { melds: melds.map((meld) => [...meld]), loose: [...loose], points }
+      }
       return
     }
 
-    const first = remaining[0]
-    search(remaining.slice(1), unmatchedPoints + cardPoints(first))
-    for (let size = 3; size <= remaining.length; size += 1) {
-      for (const meld of combinations(remaining, size)) {
+    const [first, ...rest] = remaining
+    visit(rest, melds, [...loose, first])
+    for (let size = 2; size <= rest.length; size += 1) {
+      for (const others of combinationsOf(rest, size)) {
+        const meld = [first, ...others]
         if (!isValidMeld(meld)) continue
-        const meldKeys = new Set(meld.map(cardKey))
-        search(remaining.filter((card) => !meldKeys.has(cardKey(card))), unmatchedPoints)
+        const used = new Set(others.map((card) => card.id))
+        visit(rest.filter((card) => !used.has(card.id)), [...melds, meld], loose)
       }
     }
   }
-  search(hand, 0)
-  return best.value
+
+  visit(hand, [], [])
+  return best
 }
 
-export function canCloseChinchon(hand: ChinchonCard[]): boolean {
-  return minimumUnmatchedPoints(hand) <= 5
+export function bestArrangement(hand: ChinchonCard[]): HandArrangement {
+  return searchArrangement(hand, () => true) ?? { melds: [], loose: [...hand], points: sumPoints(hand) }
 }
 
-export function drawFromDeck(round: ChinchonRound, playerId: string): ChinchonActionResult {
-  const active = round.players[round.activePlayerIndex]
-  if (!active || active.id !== playerId) return { ok: false, error: 'invalid-turn' }
-  if (round.hasDrawn) return { ok: false, error: 'invalid-turn' }
-  if (round.deck.length === 0) {
-    if (round.discard.length <= 1) return { ok: false, error: 'deck-empty' }
-    const last = round.discard[round.discard.length - 1]
-    const recycledDeck = shuffleCards(round.discard.slice(0, -1))
-    if (recycledDeck.length === 0) return { ok: false, error: 'deck-empty' }
-    const card = recycledDeck[0]
-    return {
-      ok: true,
-      round: {
-        ...round,
-        deck: recycledDeck.slice(1),
-        discard: [last],
-        hasDrawn: true,
-        players: round.players.map((player) =>
-          player.id === playerId ? { ...player, hand: [...player.hand, card] } : player,
-        ),
-      },
-    }
-  }
-  const card = round.deck[0]
-  return {
-    ok: true,
-    round: {
-      ...round,
-      deck: round.deck.slice(1),
-      hasDrawn: true,
-      players: round.players.map((player) =>
-        player.id === playerId ? { ...player, hand: [...player.hand, card] } : player,
-      ),
-    },
-  }
+export function minimumUnmatchedPoints(hand: ChinchonCard[]): number {
+  return bestArrangement(hand).points
 }
 
-export function drawFromDiscard(round: ChinchonRound, playerId: string): ChinchonActionResult {
-  const active = round.players[round.activePlayerIndex]
-  if (!active || active.id !== playerId) return { ok: false, error: 'invalid-turn' }
-  if (round.hasDrawn) return { ok: false, error: 'invalid-turn' }
-  if (round.discard.length === 0) return { ok: false, error: 'invalid-card' }
-  const card = round.discard[round.discard.length - 1]
-  return {
-    ok: true,
-    round: {
-      ...round,
-      discard: round.discard.slice(0, -1),
-      hasDrawn: true,
-      players: round.players.map((player) =>
-        player.id === playerId ? { ...player, hand: [...player.hand, card] } : player,
-      ),
-    },
-  }
+/** Cierre válido: como mucho una carta suelta, que no sea comodín y valga 5 o menos. */
+export function closingArrangement(hand: ChinchonCard[]): HandArrangement | null {
+  return searchArrangement(hand, (loose) =>
+    loose.length === 0
+    || (loose.length === 1 && !isJoker(loose[0]) && cardPoints(loose[0]) <= MAX_CLOSING_LOOSE_POINTS))
 }
 
-export function discardCard(round: ChinchonRound, playerId: string, cardId: string): ChinchonActionResult {
-  const active = round.players[round.activePlayerIndex]
-  if (!active || active.id !== playerId) return { ok: false, error: 'invalid-turn' }
-  if (!round.hasDrawn) return { ok: false, error: 'invalid-turn' }
-  const card = active.hand.find((candidate) => candidate.id === cardId)
-  if (!card) return { ok: false, error: 'invalid-card' }
-  const nextIndex = (round.activePlayerIndex + 1) % round.players.length
-  return {
-    ok: true,
-    round: {
-      ...round,
-      activePlayerIndex: nextIndex,
-      hasDrawn: false,
-      discard: [...round.discard, card],
-      players: round.players.map((player) =>
-        player.id === playerId ? { ...player, hand: player.hand.filter((candidate) => candidate.id !== cardId) } : player,
-      ),
-    },
-  }
+/** Chinchón: las 7 cartas seguidas del mismo palo, sin comodín. */
+export function isChinchon(hand: ChinchonCard[]): boolean {
+  if (hand.length !== HAND_SIZE || hand.some(isJoker)) return false
+  if (!hand.every((card) => card.suit === hand[0].suit)) return false
+  const positions = hand.map(rankPosition).sort((first, second) => first - second)
+  return positions.every((position, index) => index === 0 || position === positions[index - 1] + 1)
 }
 
-export function closeChinchon(round: ChinchonRound, playerId: string): ChinchonActionResult {
-  const active = round.players[round.activePlayerIndex]
-  if (!active || active.id !== playerId) return { ok: false, error: 'invalid-turn' }
-  if (!canCloseChinchon(active.hand)) return { ok: false, error: 'cannot-close' }
-  const unmatched = minimumUnmatchedPoints(active.hand)
-  const isNatural = active.hand.every((card) => card.suit === active.hand[0].suit)
-    && [...active.hand.map((card) => card.rank)].sort((a, b) => a - b).every((rank, index, ranks) => index === 0 || rank === ranks[index - 1] + 1)
-  const players = round.players.map((player) => {
-    if (player.id === playerId) {
-      const playerScore = isNatural ? -50 : unmatched === 0 ? -10 : unmatched
-      return { ...player, score: player.score + playerScore }
-    }
-    return { ...player, score: player.score + minimumUnmatchedPoints(player.hand) }
-  })
-  return {
-    ok: true,
-    round: {
-      ...round,
-      players,
-      status: 'closed',
-      winnerId: playerId,
-    },
-  }
+/** Puntos de quien cierra: -50 con chinchón, -10 sin cartas sueltas o el valor de su carta suelta. */
+export function closingPoints(hand: ChinchonCard[], arrangement: HandArrangement): number {
+  if (isChinchon(hand)) return CHINCHON_BONUS
+  return arrangement.loose.length === 0 ? CLOSE_BONUS : arrangement.points
+}
+
+export function canLayOff(meld: ChinchonCard[], card: ChinchonCard): boolean {
+  return isValidMeld([...meld, card])
+}
+
+const RANK_LABELS: Record<number, string> = { 10: 'S', 11: 'C', 12: 'R' }
+
+export function rankLabel(card: ChinchonCard): string {
+  if (isJoker(card)) return '★'
+  return RANK_LABELS[card.rank] ?? String(card.rank)
+}
+
+/** Orden de presentación: por palo y número, comodines al final. */
+export function sortCards(cards: ChinchonCard[]): ChinchonCard[] {
+  const suitOrder = (card: ChinchonCard) => isJoker(card) ? SPANISH_SUITS.length : SPANISH_SUITS.indexOf(card.suit as SpanishSuit)
+  return [...cards].sort((first, second) => suitOrder(first) - suitOrder(second) || rankPosition(first) - rankPosition(second))
 }
