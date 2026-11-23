@@ -2,6 +2,15 @@ import { useEffect, useRef, useState } from 'react'
 import type { KeyboardEvent, TouchEvent, WheelEvent } from 'react'
 import { adjustPlayerScore, createPhysicalGame, PhysicalGame, SetupError } from './domain/physicalGame'
 import { loadPhysicalGame, savePhysicalGame } from './infrastructure/storage/physicalGameStorage'
+import { createGuestIdentity } from './domain/identity'
+import type { DigitalRoom } from './domain/room'
+import { loadGuestIdentity, saveGuestIdentity } from './infrastructure/storage/guestIdentityStorage'
+import { readSupabasePublicConfig } from './infrastructure/supabase/config'
+import {
+  createRoomInSupabase,
+  joinRoomInSupabase,
+  subscribeToRoomInSupabase,
+} from './infrastructure/supabase/roomRepository'
 
 type Language = 'es' | 'en'
 type View = 'home' | 'physical-games' | 'physical' | 'digital-games' | 'digital'
@@ -160,6 +169,12 @@ function App() {
   const touchStartY = useRef<number | null>(null)
   const suppressTouchClick = useRef(false)
   const [storageStatus, setStorageStatus] = useState<'loading' | 'ready' | 'saved' | 'unavailable' | 'invalid-data' | 'save-failed'>('loading')
+  const [guestName, setGuestName] = useState('')
+  const [joinCode, setJoinCode] = useState('')
+  const [digitalRoom, setDigitalRoom] = useState<DigitalRoom | null>(null)
+  const [digitalError, setDigitalError] = useState<string | null>(null)
+  const [digitalLoading, setDigitalLoading] = useState(false)
+  const supabaseConfiguration = readSupabasePublicConfig()
   const t = copy[language]
 
   useEffect(() => {
@@ -177,9 +192,20 @@ function App() {
   }, [])
 
   useEffect(() => {
+    const result = loadGuestIdentity()
+    if (result.ok) setGuestName(result.identity?.name ?? '')
+  }, [])
+
+  useEffect(() => {
     if (!physicalGame || !['ready', 'saved', 'save-failed'].includes(storageStatus)) return
     setStorageStatus(savePhysicalGame(physicalGame) ? 'saved' : 'save-failed')
   }, [physicalGame, storageStatus])
+
+  useEffect(() => {
+    if (!digitalRoom) return
+    const unsubscribe = subscribeToRoomInSupabase(digitalRoom.id, setDigitalRoom)
+    return unsubscribe ?? undefined
+  }, [digitalRoom?.id])
 
   const navigate = (nextView: View) => {
     setView(nextView)
@@ -240,6 +266,69 @@ function App() {
       event.preventDefault()
       changePlayerScore(playerId, -1)
     }
+  }
+
+  const resolveGuestIdentity = (): { id: string; name: string } | null => {
+    const current = loadGuestIdentity()
+    const existing = current.ok ? current.identity : null
+    const enteredName = guestName.trim()
+    if (existing && enteredName && existing.name !== enteredName) {
+      const updated = { ...existing, name: enteredName }
+      if (saveGuestIdentity(updated)) return updated
+    }
+    if (existing) return enteredName ? existing : null
+    const created = createGuestIdentity(guestName)
+    if (!created) return null
+    if (!saveGuestIdentity(created)) return null
+    return created
+  }
+
+  const createDigitalRoom = async () => {
+    if (!supabaseConfiguration.ok) {
+      setDigitalError('Supabase no está configurado en este entorno.')
+      return
+    }
+    setDigitalLoading(true)
+    setDigitalError(null)
+    const identity = resolveGuestIdentity()
+    if (!identity) {
+      setDigitalError('Escribe un nombre temporal.')
+      setDigitalLoading(false)
+      return
+    }
+    const result = await createRoomInSupabase(identity.id, identity.name)
+    if (!result.ok) {
+      setDigitalError(result.error === 'supabase-error' ? 'No se pudo crear la sala.' : 'Supabase no está configurado.')
+    } else {
+      setDigitalRoom(result.room)
+    }
+    setDigitalLoading(false)
+  }
+
+  const joinDigitalRoom = async () => {
+    if (!supabaseConfiguration.ok) {
+      setDigitalError('Supabase no está configurado en este entorno.')
+      return
+    }
+    if (!joinCode.trim()) {
+      setDigitalError('Introduce el código de invitación.')
+      return
+    }
+    setDigitalLoading(true)
+    setDigitalError(null)
+    const identity = resolveGuestIdentity()
+    if (!identity) {
+      setDigitalError('Escribe un nombre temporal.')
+      setDigitalLoading(false)
+      return
+    }
+    const result = await joinRoomInSupabase(joinCode, identity.id, identity.name)
+    if (!result.ok) {
+      setDigitalError(result.error === 'supabase-error' ? 'El código no es válido, ha caducado o la sala está llena.' : 'Supabase no está configurado.')
+    } else {
+      setDigitalRoom(result.room)
+    }
+    setDigitalLoading(false)
   }
 
   const setupErrorText = setupError === 'player-count'
@@ -415,17 +504,67 @@ function App() {
                   )}
                 </div>
               ) : (
-                <div className="demo-panel">
-                  <p className="eyebrow">02 · {t.digital} · Chinchón</p>
-                  <h1>{t.chinchonDigitalTitle}</h1>
-                  <p>{t.chinchonDigitalIntro}</p>
-                  <div className="demo-checks">
-                    <div><span className="check" aria-hidden="true">✓</span><span>{t.lobby}</span><strong>{t.ready}</strong></div>
-                    <div><span className="check" aria-hidden="true">✓</span><span>{t.turn}</span><strong>{t.demoValue}</strong></div>
-                    <div><span className="check" aria-hidden="true">✓</span><span>{t.reconnect}</span><strong>{t.safe}</strong></div>
+                  <div className="digital-room-panel">
+                    <p className="eyebrow">02 · {t.digital} · Chinchón</p>
+                    {digitalRoom ? (
+                      <>
+                        <h1>Sala {digitalRoom.code}</h1>
+                        <p className="room-status" role="status">
+                          {digitalRoom.status === 'waiting' ? 'Esperando jugadores' : digitalRoom.status}
+                        </p>
+                        <div className="room-members" aria-label="Jugadores de la sala">
+                          {digitalRoom.members.map((member) => (
+                            <article className="room-member" key={member.identityId}>
+                              <span className={`connection-dot ${member.connection}`} aria-hidden="true" />
+                              <strong>{member.name}</strong>
+                              {member.isHost && <span className="host-badge">Anfitrión</span>}
+                            </article>
+                          ))}
+                        </div>
+                        <p className="room-expiry">El enlace y el código siguen activos hasta {new Date(digitalRoom.expiresAt).toLocaleString()}</p>
+                        <button className="button secondary" type="button" onClick={() => setDigitalRoom(null)}>Cerrar vista de sala</button>
+                      </>
+                    ) : (
+                      <>
+                        <h1>Crear o entrar en una sala</h1>
+                        <p>Identidad temporal guardada en este dispositivo. La partida puede tener entre 2 y 4 jugadores.</p>
+                        {!supabaseConfiguration.ok && (
+                          <p className="room-config-error" role="alert">
+                            Falta la configuración pública de Supabase en este entorno. No se abrirá una sala simulada.
+                          </p>
+                        )}
+                        <div className="room-identity">
+                          <label htmlFor="guest-name">Nombre temporal</label>
+                          <input
+                            id="guest-name"
+                            value={guestName}
+                            onChange={(event) => setGuestName(event.target.value)}
+                            autoComplete="nickname"
+                            maxLength={24}
+                          />
+                        </div>
+                        <div className="room-actions">
+                          <button className="button primary" type="button" onClick={createDigitalRoom} disabled={digitalLoading || !supabaseConfiguration.ok}>
+                            Crear sala
+                          </button>
+                          <div className="join-room">
+                            <label htmlFor="join-code">Código de invitación</label>
+                            <input
+                              id="join-code"
+                              value={joinCode}
+                              onChange={(event) => setJoinCode(event.target.value.toUpperCase())}
+                              maxLength={6}
+                              autoComplete="off"
+                            />
+                            <button className="button secondary" type="button" onClick={joinDigitalRoom} disabled={digitalLoading || !supabaseConfiguration.ok}>
+                              Entrar
+                            </button>
+                          </div>
+                        </div>
+                        {digitalError && <p className="form-error" role="alert">{digitalError}</p>}
+                      </>
+                    )}
                   </div>
-                  <button className="button primary" onClick={() => navigate('digital-games')}>← {t.backToMode}</button>
-                </div>
               )
             }
           </section>
