@@ -111,6 +111,24 @@ h1 { max-width: 620px; margin-bottom: 24px; font-size: clamp(42px, 5.2vw, 78px);
 .form-error { margin: 16px 0 0; color: var(--coral); font-size: 12px; }
 .storage-message { margin: 0 0 18px; color: var(--coral); font-size: 12px; line-height: 1.5; }
 .storage-message.success { color: #79e19b; }
+.digital-room-panel { max-width: 760px; margin: 66px auto 0; padding: 38px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+.digital-room-panel h1 { font-size: clamp(36px, 5vw, 56px); margin-bottom: 14px; }
+.digital-room-panel > p:not(.eyebrow) { color: var(--muted); line-height: 1.6; }
+.digital-room-panel .room-config-error { color: var(--coral) !important; }
+.room-identity { display: grid; gap: 7px; margin-top: 24px; }
+.room-identity label, .join-room label { color: var(--muted); font-size: 11px; }
+.room-identity input, .join-room input { width: 100%; padding: 11px 12px; color: var(--ink); background: #10131d; border: 1px solid var(--line); border-radius: 6px; font: inherit; }
+.room-actions { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: end; gap: 16px; margin-top: 18px; }
+.join-room { display: grid; grid-template-columns: minmax(120px, 180px) auto; gap: 8px; align-items: end; }
+.join-room label { grid-column: 1 / -1; }
+.room-status { color: var(--yellow) !important; text-transform: uppercase; font: 600 11px 'DM Mono', monospace; letter-spacing: .12em; }
+.room-members { display: grid; gap: 8px; margin: 24px 0; }
+.room-member { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 48px; padding: 10px 12px; background: #10131d; border: 1px solid var(--line); border-radius: 8px; }
+.connection-dot { width: 8px; height: 8px; border-radius: 50%; background: #79e19b; }
+.connection-dot.reconnecting { background: var(--yellow); }
+.connection-dot.absent, .connection-dot.paused { background: var(--coral); }
+.host-badge { color: var(--yellow); font-size: 10px; text-transform: uppercase; }
+.room-expiry { font-size: 12px; }
 .game-heading { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin-bottom: 28px; }
 .game-heading h1 { margin: 0; }
 .game-selection-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 760px; gap: 14px; }
@@ -183,6 +201,9 @@ h1 { max-width: 620px; margin-bottom: 24px; font-size: clamp(42px, 5.2vw, 78px);
   .playing-card { min-height: 190px; }
   .demo-panel { margin-top: 65px; padding: 26px; }
   .physical-panel { margin-top: 50px; padding: 23px; }
+  .digital-room-panel { margin-top: 50px; padding: 23px; }
+  .room-actions { grid-template-columns: 1fr; }
+  .join-room { grid-template-columns: 1fr; }
   .score-counter-grid { grid-template-columns: 1fr; }
   .scorekeeper-shell .scorekeeper-panel { gap: 8px; padding: 56px 10px max(10px, env(safe-area-inset-bottom)); }
   .scorekeeper-panel .score-counter-grid,
