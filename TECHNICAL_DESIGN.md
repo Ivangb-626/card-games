@@ -19,6 +19,21 @@ El workflow `.github/workflows/deploy-pages.yml` instala las dependencias, ejecu
 
 La navegación actual cambia estado dentro de una sola página y no usa rutas profundas. Por este motivo, no es necesario añadir una página `404.html` ni compatibilidad con rutas SPA en esta fase.
 
+### Publicación en Vercel
+
+Vercel puede desplegar el mismo build normal de Vite con `base: '/'`. El workflow `.github/workflows/deploy-vercel.yml` ofrece previews controladas para pull requests y despliegue a producción desde `main` o desde ejecución manual.
+
+La tarea de producción usa el entorno protegido `vercel-production`. Antes del primer despliegue debe existir en GitHub un entorno con ese nombre y las reglas de aprobación deseadas. Los despliegues a producción quedan bloqueados hasta que el entorno esté aprobado.
+
+Configuración requerida en GitHub Actions:
+
+- Crear los secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID` y `VERCEL_PROJECT_ID`.
+- Registrar los secretos en el repositorio o en el entorno `vercel-production`, según la política de acceso elegida.
+- La integración de Vercel debe tener habilitado el proyecto correspondiente y permitir que el token identificado pueda leer y desplegar ese proyecto.
+- No añadir los valores a archivos del repositorio ni a logs de workflow.
+
+Este workflow no sustituye ni modifica el despliegue existente de GitHub Pages. Tampoco añade Supabase, migraciones, login ni estadísticas.
+
 ## Componentes propuestos
 
 El diseño inicial se organiza alrededor de estas responsabilidades:
