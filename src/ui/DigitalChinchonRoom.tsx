@@ -85,6 +85,16 @@ const copy = {
     waitingNextRound: 'Esperando a que empiece la siguiente ronda…',
     eliminatedWait: 'Estás fuera: no juegas esta ronda.',
     finished: 'Fin de la partida',
+    summaryRounds: (count: number) => count === 1 ? '1 ronda' : `${count} rondas`,
+    standings: 'Clasificación final',
+    byRound: 'Resumen ronda a ronda',
+    winnerBadge: 'Ganador',
+    lowestBadge: 'Menos puntos',
+    pointsShort: (points: number) => `${points} puntos`,
+    rejoinCount: (count: number) => count === 1 ? '1 reenganche' : `${count} reenganches`,
+    lastRound: 'Ver las manos de la última ronda',
+    newRoom: 'Crear o entrar en otra sala',
+    backToHome: 'Volver al inicio',
     winner: (names: string[]) => `${names.length === 1 ? 'Gana' : 'Ganan'} ${names.join(' y ')}.`,
     lowest: (names: string[]) => `Sin ganador. Menos puntos: ${names.join(' y ')}.`,
     errors: {
@@ -157,6 +167,16 @@ const copy = {
     waitingNextRound: 'Waiting for the next round to start…',
     eliminatedWait: 'You are out: you sit this round out.',
     finished: 'Game over',
+    summaryRounds: (count: number) => count === 1 ? '1 round' : `${count} rounds`,
+    standings: 'Final standings',
+    byRound: 'Round by round',
+    winnerBadge: 'Winner',
+    lowestBadge: 'Fewest points',
+    pointsShort: (points: number) => `${points} points`,
+    rejoinCount: (count: number) => count === 1 ? '1 rejoin' : `${count} rejoins`,
+    lastRound: 'Show the hands of the last round',
+    newRoom: 'Create or join another room',
+    backToHome: 'Back to start',
     winner: (names: string[]) => `${names.join(' and ')} ${names.length === 1 ? 'wins' : 'win'}.`,
     lowest: (names: string[]) => `No winner. Fewest points: ${names.join(' and ')}.`,
     errors: {
@@ -220,9 +240,10 @@ type Props = {
   memberId: string | null
   language: Language
   onLeave: () => void
+  onGoHome: () => void
 }
 
-export function DigitalChinchonRoom({ room, memberId, language, onLeave }: Props) {
+export function DigitalChinchonRoom({ room, memberId, language, onLeave, onGoHome }: Props) {
   const t = copy[language]
   const [snapshot, setSnapshot] = useState<GameSnapshot | null>(null)
   const [pending, setPending] = useState(false)
@@ -387,12 +408,91 @@ export function DigitalChinchonRoom({ room, memberId, language, onLeave }: Props
   const required = requiredNextRoundReady({ seats: view.seats, hostId: view.hostId })
   const rejoinScore = getRejoinScore(view.scoreboard)
 
+  const roundsTable = (
+    <div className="summary-table-wrap">
+      <table className="summary-table">
+        <thead>
+          <tr>
+            <th scope="col">{t.roundColumn}</th>
+            {view.seats.map((seat) => <th scope="col" key={seat.id}>{seat.name}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {view.scoreboard.rounds.map((record) => (
+            <tr key={record.round}>
+              <th scope="row">{record.round}</th>
+              {view.seats.map((seat) => {
+                const points = record.points[seat.id] ?? null
+                const rejoin = record.rejoins.find((item) => item.playerId === seat.id)
+                return (
+                  <td key={seat.id}>
+                    <span className="summary-points">{points === null ? '—' : points > 0 ? `+${points}` : points}</span>
+                    <span className="summary-total">{record.totals[seat.id] ?? '—'}</span>
+                    {rejoin && <span className="summary-rejoin">↺ {rejoin.score}</span>}
+                  </td>
+                )
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+
+  if (view.phase === 'finished') {
+    const highlighted = winners.length > 0 ? winners : getLowestScorePlayers(view.scoreboard)
+    const highlightedIds = new Set(highlighted.map((player) => player.id))
+    const standings = [...view.seats].sort((first, second) => view.scoreboard.scores[first.id] - view.scoreboard.scores[second.id])
+    return (
+      <div className="digital-room-panel game-summary-panel dc-summary">
+        <p className="eyebrow">Chinchón · {t.room(room.code)} · {t.summaryRounds(view.scoreboard.rounds.length)}</p>
+        <h1>{t.finished}</h1>
+        {winners.length > 0 ? (
+          <p className="summary-winner" role="status">
+            <span aria-hidden="true">🏆</span> {t.winner(winners.map((player) => player.name))}
+          </p>
+        ) : (
+          <p className="summary-lowest" role="status">{t.lowest(highlighted.map((player) => player.name))}</p>
+        )}
+        <ol className="summary-standings" aria-label={t.standings}>
+          {standings.map((seat) => {
+            const top = highlightedIds.has(seat.id)
+            const className = top ? (winners.length > 0 ? 'is-winner' : 'is-lowest') : isPlayerEliminated(view.scoreboard, seat.id) ? 'is-eliminated' : undefined
+            return (
+              <li key={seat.id} className={className}>
+                <strong>
+                  {seat.name}{seat.id === me ? ` (${t.you})` : ''}
+                  {top && winners.length > 0 && <span className="score-badge winner">{t.winnerBadge}</span>}
+                  {top && winners.length === 0 && <span className="score-badge lowest">{t.lowestBadge}</span>}
+                </strong>
+                <span>{t.pointsShort(view.scoreboard.scores[seat.id])}</span>
+                <span>{t.rejoinCount(view.scoreboard.rejoins[seat.id] ?? 0)}</span>
+              </li>
+            )
+          })}
+        </ol>
+        <h2 className="summary-heading">{t.byRound}</h2>
+        {roundsTable}
+        {view.revealed && (
+          <details className="dc-last-round">
+            <summary>{t.lastRound}</summary>
+            <div className="dc-results">{view.revealed.map(renderRevealed)}</div>
+          </details>
+        )}
+        <div className="summary-actions">
+          <button className="button primary" type="button" onClick={onLeave}>{t.newRoom}</button>
+          <button className="button secondary" type="button" onClick={onGoHome}>{t.backToHome}</button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="digital-room-panel dc-table">
       <div className="dc-heading">
         <div>
           <p className="eyebrow">Chinchón · {t.room(room.code)}</p>
-          <h1>{view.phase === 'finished' ? t.finished : t.round(view.scoreboard.round)}</h1>
+          <h1>{t.round(view.scoreboard.round)}</h1>
         </div>
         <button className="button secondary" type="button" onClick={onLeave}>{t.leave}</button>
       </div>
@@ -517,13 +617,6 @@ export function DigitalChinchonRoom({ room, memberId, language, onLeave }: Props
           {!seatedInGame && <p className="dc-status" role="status">{t.joining}</p>}
           {seatedInGame && view.phase === 'round-ended' && !view.turnOrder.includes(me) && !iAmOut && (
             <p className="dc-status" role="status">{t.lateJoinNote}</p>
-          )}
-          {view.phase === 'finished' && (
-            <p className="summary-winner" role="status">
-              {winners.length > 0
-                ? <><span aria-hidden="true">🏆</span> {t.winner(winners.map((player) => player.name))}</>
-                : t.lowest(getLowestScorePlayers(view.scoreboard).map((player) => player.name))}
-            </p>
           )}
           {view.revealed && lastRound && (
             <section className="dc-results" aria-label={t.roundResults(lastRound.round)}>

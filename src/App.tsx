@@ -1030,6 +1030,10 @@ function App() {
                     memberId={digitalRoom.members.find((member) => member.identityId === digitalIdentityId)?.id ?? null}
                     language={language}
                     onLeave={leaveDigitalRoom}
+                    onGoHome={() => {
+                      leaveDigitalRoom()
+                      navigate('home')
+                    }}
                   />
               ) : (
                   <div className="digital-room-panel">

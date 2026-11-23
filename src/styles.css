@@ -319,6 +319,12 @@ button.dc-card:disabled { cursor: default; }
 .dc-points { color: var(--yellow); font: 600 14px 'DM Mono', monospace; }
 .dc-revealed-cards { display: flex; flex-wrap: wrap; gap: 10px; }
 .dc-revealed .dc-card { width: 44px; height: 62px; }
+.digital-room-panel.dc-summary { max-width: 860px; }
+.dc-summary > p:not(.eyebrow) { color: inherit; }
+.dc-last-round { margin-top: 22px; }
+.dc-last-round summary { cursor: pointer; color: var(--yellow); font-size: 13px; font-weight: 600; }
+.dc-last-round .dc-results { margin-top: 12px; }
+.dc-card-as { position: absolute; right: 3px; bottom: 2px; color: #17191f; font-size: 10px; font-weight: 700; }
 .dc-revealed .dc-card-rank { font-size: 17px; }
 .dc-revealed .dc-card-suit { font-size: 14px; }
 
