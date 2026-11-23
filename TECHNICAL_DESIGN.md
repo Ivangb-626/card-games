@@ -144,6 +144,7 @@ Primer hito jugable del modo digital. Lo que falta está en `TASKS.md`, Fase 4.
   - `room_game_hands` guarda una fila por jugador que solo puede leer su dueño.
   - Las dos últimas, junto con `rooms` y `room_members`, se sincronizan con Supabase Realtime.
 - Las políticas RLS comprueban la pertenencia con `private.is_room_member` y `private.is_own_member` (security definer). Una política de `room_members` no puede consultar `room_members` directamente, porque Postgres lo rechaza por recursión.
+- En este proyecto las tablas nuevas no reciben permisos por defecto: cada migración que cree una tabla debe conceder `select` a `authenticated` (si la leen los clientes, siempre con RLS) y a `service_role` (si la usa la Edge Function). Sin permisos, ni Realtime ni la Edge Function ven los datos.
 - Además de Realtime, la sala se relee cada 5 s y la partida cada 4 s como respaldo.
 - Cada jugada válida queda en `room_events` con jugador, tipo, datos y versión; la carta con la que se cierra no se registra porque está boca abajo.
 - Una vez empezada la partida, solo pueden volver a entrar en la sala quienes ya eran miembros. Cada jugada mantiene viva la sala 30 minutos más.
