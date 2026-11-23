@@ -36,6 +36,7 @@ import { readSupabasePublicConfig } from './infrastructure/supabase/config'
 import {
   createRoomInSupabase,
   joinRoomInSupabase,
+  type RoomRepositoryError,
   subscribeToRoomInSupabase,
 } from './infrastructure/supabase/roomRepository'
 
@@ -571,6 +572,21 @@ function App() {
     clearSavedDigitalRoom()
   }
 
+  const roomErrorText = (error: RoomRepositoryError, detail: string | undefined, fallback: string) => {
+    const messages: Record<RoomRepositoryError, string> = {
+      'not-configured': 'Supabase no está configurado en este entorno.',
+      'guest-session-failed': 'No se pudo iniciar la sesión de invitado en Supabase. Comprueba que el inicio de sesión anónimo está activado.',
+      'room-not-found': 'El código no es válido o la sala ha caducado.',
+      'room-full': 'La sala está llena.',
+      'name-duplicate': 'Ya hay alguien con ese nombre en la sala.',
+      'game-started': 'La partida de esa sala ya ha empezado.',
+      'supabase-error': fallback,
+    }
+    return detail && (error === 'guest-session-failed' || error === 'supabase-error')
+      ? `${messages[error]} (${detail})`
+      : messages[error]
+  }
+
   const createDigitalRoom = async () => {
     if (!supabaseConfiguration.ok) {
       setDigitalError('Supabase no está configurado en este entorno.')
@@ -586,7 +602,7 @@ function App() {
     }
     const result = await createRoomInSupabase(identity.id, identity.name)
     if (!result.ok) {
-      setDigitalError(result.error === 'supabase-error' ? 'No se pudo crear la sala.' : 'Supabase no está configurado.')
+      setDigitalError(roomErrorText(result.error, result.detail, 'No se pudo crear la sala.'))
     } else {
       enterDigitalRoom(result.room, identity.id)
     }
@@ -612,7 +628,7 @@ function App() {
     }
     const result = await joinRoomInSupabase(joinCode, identity.id, identity.name)
     if (!result.ok) {
-      setDigitalError(result.error === 'supabase-error' ? 'El código no es válido, ha caducado, la sala está llena o la partida ya ha empezado.' : 'Supabase no está configurado.')
+      setDigitalError(roomErrorText(result.error, result.detail, 'No se pudo entrar en la sala.'))
     } else {
       enterDigitalRoom(result.room, identity.id)
     }
