@@ -1,3 +1,6 @@
+/** La aplicación solo trabaja con el proyecto de Supabase confirmado (card-games). */
+export const SUPABASE_PROJECT_URL = 'https://pqvoolwxgffdmxbvpujs.supabase.co'
+
 export type SupabasePublicConfig = {
   url: string
   anonKey: string
@@ -5,22 +8,16 @@ export type SupabasePublicConfig = {
 
 export type SupabaseConfigResult =
   | { ok: true; config: SupabasePublicConfig }
-  | { ok: false; error: 'missing' | 'invalid-url' | 'unexpected-host' }
+  | { ok: false; error: 'missing' }
 
+/**
+ * Solo hace falta la clave pública (anon o publishable). La URL es fija para que una
+ * variable mal escrita no pueda dejar la aplicación desconectada ni apuntar a otro proyecto.
+ */
 export function readSupabasePublicConfig(
-  url = import.meta.env.VITE_SUPABASE_URL as string | undefined,
   anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined,
 ): SupabaseConfigResult {
-  if (!url || !anonKey) return { ok: false, error: 'missing' }
-
-  let parsed: URL
-  try {
-    parsed = new URL(url)
-  } catch {
-    return { ok: false, error: 'invalid-url' }
-  }
-  if (parsed.protocol !== 'https:' || parsed.hostname !== 'pqvoolwxgffdmxbvpujs.supabase.co') {
-    return parsed.protocol !== 'https:' ? { ok: false, error: 'invalid-url' } : { ok: false, error: 'unexpected-host' }
-  }
-  return { ok: true, config: { url: parsed.toString().replace(/\/$/, ''), anonKey } }
+  const key = anonKey?.trim()
+  if (!key) return { ok: false, error: 'missing' }
+  return { ok: true, config: { url: SUPABASE_PROJECT_URL, anonKey: key } }
 }

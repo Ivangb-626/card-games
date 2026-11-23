@@ -79,7 +79,7 @@ Los nombres son una guía de organización; no son carpetas creadas ni una inter
 
 La primera dependencia de cliente será `@supabase/supabase-js`. Incluye soporte para base de datos, Auth y Realtime; no se prevén dependencias adicionales de Supabase para la SPA Vite actual. `@supabase/ssr` no forma parte de esta dirección mientras el proyecto no incorpore renderizado en servidor.
 
-`src/infrastructure/supabase/config.ts` deberá validar configuración antes de crear una instancia única del cliente en `client.ts`. La validación comprobará que existe la URL, que usa HTTPS y que el hostname corresponde a `pqvoolwxgffdmxbvpujs.supabase.co`, sin registrar claves ni valores sensibles.
+`src/infrastructure/supabase/config.ts` fija la URL del proyecto (`https://pqvoolwxgffdmxbvpujs.supabase.co`) y solo lee la clave pública antes de crear una instancia única del cliente en `client.ts`, sin registrar claves ni valores sensibles.
 
 La aplicación cliente usará únicamente una URL pública y una clave anon o publishable. Las claves de servidor, contraseñas y cualquier `service_role` vivirán exclusivamente en secretos de funciones autoritativas o de un backend aprobado; nunca en el navegador ni bajo un prefijo `VITE_`.
 
@@ -87,9 +87,11 @@ La aplicación cliente usará únicamente una URL pública y una clave anon o pu
 
 | Entorno | Variables públicas previstas | Ubicación prevista | Estado actual |
 |---|---|---|---|
-| Development | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | `.env.local`, excluido de Git | No hay archivos `.env*` ni variables locales. |
-| Preview y Production (Vercel) | mismas variables públicas | Variables del repositorio en GitHub Actions (`vars.VITE_SUPABASE_URL`, `vars.VITE_SUPABASE_ANON_KEY`), porque la compilación se hace en el workflow | Pendiente de crear en GitHub. |
-| GitHub Pages | mismas variables públicas | Variables del repositorio en GitHub Actions | Pendiente de crear en GitHub. |
+| Development | `VITE_SUPABASE_ANON_KEY` | `.env.local`, excluido de Git | Lo crea cada desarrollador. |
+| Preview y Production (Vercel) | `VITE_SUPABASE_ANON_KEY` | Variable del repositorio en GitHub Actions (`vars.VITE_SUPABASE_ANON_KEY`), porque la compilación se hace en el workflow | Configurada en GitHub. |
+| GitHub Pages | `VITE_SUPABASE_ANON_KEY` | Variable del repositorio en GitHub Actions | Configurada en GitHub. |
+
+La URL del proyecto (`https://pqvoolwxgffdmxbvpujs.supabase.co`) es fija en `src/infrastructure/supabase/config.ts`; `VITE_SUPABASE_URL` ya no se usa.
 
 Los prefijos `VITE_` hacen que los valores se incorporen al bundle; solo se permiten la URL pública y una clave de cliente anon o publishable. Nunca se deben imprimir valores de variables, incluirlos en errores ni almacenarlos en documentación.
 

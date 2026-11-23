@@ -41,7 +41,6 @@ jobs:
       - name: Build application
         run: npm run build
         env:
-          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
 
       - name: Pull Vercel preview environment
@@ -53,7 +52,6 @@ jobs:
       - name: Build Vercel preview
         run: npx vercel@latest build --token=${{ secrets.VERCEL_TOKEN }}
         env:
-          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
 
       - name: Deploy Vercel preview
@@ -83,7 +81,6 @@ jobs:
       - name: Build application
         run: npm run build
         env:
-          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
 
       - name: Pull Vercel production environment
@@ -95,7 +92,6 @@ jobs:
       - name: Build Vercel production
         run: npx vercel@latest build --prod --token=${{ secrets.VERCEL_TOKEN }}
         env:
-          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
 
       - name: Deploy Vercel production
