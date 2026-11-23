@@ -104,7 +104,18 @@ Comprueba en el panel → **Edge Functions** que aparece `chinchon-game`.
 
 La migración de partida añade `rooms`, `room_members`, `room_game_public` y `room_game_hands` a la publicación `supabase_realtime`. En el panel → **Database** → **Publications** → `supabase_realtime`, deberían aparecer esas cuatro tablas.
 
-## Paso 9 · Probar en local
+## Paso 9 · Configurar la web publicada
+
+Los workflows de GitHub Pages y de Vercel compilan la aplicación en GitHub Actions y leen la URL y la clave pública de Supabase de las **variables del repositorio**. Sin ellas, la web muestra «Falta la configuración pública de Supabase» y no deja crear salas.
+
+1. En GitHub: repositorio → **Settings** → **Secrets and variables** → **Actions** → pestaña **Variables** → **New repository variable**.
+2. Crea `VITE_SUPABASE_URL` con el valor `https://pqvoolwxgffdmxbvpujs.supabase.co`.
+3. Crea `VITE_SUPABASE_ANON_KEY` con la clave **anon** o **publishable** (Supabase → Project Settings → API). Nunca la `service_role` ni una clave `sb_secret_…`.
+4. En **Actions**, vuelve a ejecutar los workflows **Deploy Card Games to Vercel** y **Deploy Card Games to GitHub Pages** (botón **Re-run all jobs**) o sube un commit nuevo a `main`.
+
+Estas dos claves son públicas por diseño: acaban dentro del JavaScript que descarga el navegador y la seguridad la ponen las políticas RLS y la Edge Function.
+
+## Paso 10 · Probar en local
 
 1. Crea `.env.local` en la raíz (no se sube al repositorio) con la URL y la clave pública del proyecto (Project Settings → API):
 

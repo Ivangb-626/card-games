@@ -88,8 +88,8 @@ La aplicación cliente usará únicamente una URL pública y una clave anon o pu
 | Entorno | Variables públicas previstas | Ubicación prevista | Estado actual |
 |---|---|---|---|
 | Development | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | `.env.local`, excluido de Git | No hay archivos `.env*` ni variables locales. |
-| Preview | mismas variables públicas | Vercel, ámbito Preview | Ambas variables están configuradas en `card-games`. |
-| Production | mismas variables públicas | Vercel, ámbito Production | Ambas variables están configuradas en `card-games`. |
+| Preview y Production (Vercel) | mismas variables públicas | Variables del repositorio en GitHub Actions (`vars.VITE_SUPABASE_URL`, `vars.VITE_SUPABASE_ANON_KEY`), porque la compilación se hace en el workflow | Pendiente de crear en GitHub. |
+| GitHub Pages | mismas variables públicas | Variables del repositorio en GitHub Actions | Pendiente de crear en GitHub. |
 
 Los prefijos `VITE_` hacen que los valores se incorporen al bundle; solo se permiten la URL pública y una clave de cliente anon o publishable. Nunca se deben imprimir valores de variables, incluirlos en errores ni almacenarlos en documentación.
 
