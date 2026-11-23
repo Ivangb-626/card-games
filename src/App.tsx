@@ -37,10 +37,13 @@ import {
   createRoomInSupabase,
   joinRoomInSupabase,
   type RoomRepositoryError,
+  getRoomFromSupabase,
   subscribeToRoomInSupabase,
 } from './infrastructure/supabase/roomRepository'
 
 type Language = 'es' | 'en'
+const ROOM_REFRESH_MS = 5000
+
 type View = 'home' | 'physical-games' | 'physical' | 'digital-games' | 'digital'
 type RoundEdit =
   | { kind: 'adjust'; amount: number }
@@ -366,8 +369,18 @@ function App() {
 
   useEffect(() => {
     if (!digitalRoom) return
-    const unsubscribe = subscribeToRoomInSupabase(digitalRoom.id, setDigitalRoom)
-    return unsubscribe ?? undefined
+    const roomId = digitalRoom.id
+    const unsubscribe = subscribeToRoomInSupabase(roomId, setDigitalRoom)
+    // Respaldo por si se pierde algún aviso de Realtime: la sala se relee cada pocos segundos.
+    const interval = window.setInterval(() => {
+      void getRoomFromSupabase(roomId).then((result) => {
+        if (result.ok) setDigitalRoom(result.room)
+      })
+    }, ROOM_REFRESH_MS)
+    return () => {
+      unsubscribe?.()
+      window.clearInterval(interval)
+    }
   }, [digitalRoom?.id])
 
   const navigate = (nextView: View) => {

@@ -20,6 +20,8 @@ import {
 
 type Language = 'es' | 'en'
 
+const GAME_REFRESH_MS = 4000
+
 const SUIT_SYMBOLS: Record<ChinchonCard['suit'], string> = { oros: '●', copas: '♥', espadas: '⚔', bastos: '♣', comodin: '★' }
 const RANK_NAMES: Record<Language, Record<number, string>> = {
   es: { 1: 'As', 10: 'Sota', 11: 'Caballo', 12: 'Rey' },
@@ -220,7 +222,12 @@ export function DigitalChinchonRoom({ room, memberId, language, onLeave }: Props
   useEffect(() => {
     void reload()
     const unsubscribe = subscribeToGame(room.id, () => { void reload() })
-    return unsubscribe ?? undefined
+    // Respaldo por si se pierde algún aviso de Realtime.
+    const interval = window.setInterval(() => { void reload() }, GAME_REFRESH_MS)
+    return () => {
+      unsubscribe?.()
+      window.clearInterval(interval)
+    }
   }, [reload, room.id, room.status])
 
   const run = async (action: GameAction) => {
