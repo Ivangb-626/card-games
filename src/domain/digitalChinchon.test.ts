@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { ChinchonCard } from './chinchon'
 import {
+  addLateSeats,
   applyDigitalAction,
   privateHands,
   publicEventData,
@@ -155,6 +156,37 @@ describe('Digital Chinchón closing and laying off', () => {
     expect(publicView(state).revealed).toHaveLength(3)
   })
 
+  it('skips laying off after a -10 close and scores the round directly', () => {
+    const state = readyToClose()
+    const fullClose = {
+      ...state,
+      hands: { ...state.hands, host: [...closerHand.slice(0, 6), card('oros', 7), card('copas', 12)] },
+    }
+    const closed = act(fullClose, 'host', { type: 'close', cardId: 'copas-12' })
+    expect(closed.phase).toBe('round-ended')
+    expect(closed.scoreboard.scores.host).toBe(-10)
+    expect(applyDigitalAction(closed, 'beto', { type: 'lay-off', cardId: 'oros-4', meldIndex: 0 })).toEqual({ ok: false, error: 'invalid-phase' })
+  })
+
+  it('keeps the joker position chosen by the closer when others lay off', () => {
+    const state = readyToClose()
+    const withJoker: DigitalChinchonState = {
+      ...state,
+      hands: {
+        ...state.hands,
+        host: [{ id: 'comodin-1', suit: 'comodin', rank: 0 }, card('oros', 7), card('oros', 10), card('copas', 1), card('bastos', 1), card('espadas', 1), card('copas', 2), card('copas', 12)],
+        beto: [card('oros', 12), card('oros', 11), card('espadas', 2), card('espadas', 3), card('bastos', 10), card('bastos', 11), card('copas', 3)],
+      },
+    }
+    let closed = act(withJoker, 'host', { type: 'close', cardId: 'copas-12', jokerEnd: 'low' })
+    expect(closed.phase).toBe('laying-off')
+    const runIndex = closed.closing!.melds.findIndex((meld) => meld.kind === 'run')
+    expect(applyDigitalAction(closed, 'beto', { type: 'lay-off', cardId: 'oros-12', meldIndex: runIndex })).toEqual({ ok: false, error: 'cannot-lay-off' })
+    closed = act(closed, 'beto', { type: 'lay-off', cardId: 'oros-11', meldIndex: runIndex })
+    closed = act(closed, 'beto', { type: 'lay-off', cardId: 'oros-12', meldIndex: runIndex })
+    expect(closed.closing!.layOffs).toHaveLength(2)
+  })
+
   it('does not reveal the closing card in the event log', () => {
     expect(publicEventData({ type: 'close', cardId: 'copas-12' })).toEqual({ type: 'close' })
   })
@@ -220,11 +252,46 @@ describe('Digital Chinchón between rounds', () => {
       ...readyToClose(),
       hands: { ...readyToClose().hands, host: [...chinchon, card('copas', 12)] },
     }
-    let closed = act(state, 'host', { type: 'close', cardId: 'copas-12' })
-    closed = act(closed, 'beto', { type: 'lay-off-ready' })
-    closed = act(closed, 'carla', { type: 'lay-off-ready' })
+    // Con chinchón no se liga: la ronda se puntúa al cerrar.
+    const closed = act(state, 'host', { type: 'close', cardId: 'copas-12' })
     expect(closed.scoreboard.scores.host).toBe(-50)
     expect(closed.phase).toBe('finished')
+  })
+})
+
+describe('Digital Chinchón late joiners', () => {
+  function roundEnded(): DigitalChinchonState {
+    let state = unwrap(startDigitalGame(seats.slice(0, 2), 'host', seededRandom()))
+    state = {
+      ...state,
+      hasDrawn: true,
+      hands: {
+        host: closerHand,
+        beto: [card('oros', 4), card('oros', 5), card('espadas', 1), card('espadas', 2), card('bastos', 10), card('bastos', 11), card('copas', 1)],
+      },
+    }
+    state = act(state, 'host', { type: 'close', cardId: 'copas-12' })
+    return act(state, 'beto', { type: 'lay-off-ready' })
+  }
+
+  it('seats a new player between rounds with the highest score still in play', () => {
+    const state = roundEnded()
+    const joined = addLateSeats(state, [{ id: 'host', name: 'Ana' }, { id: 'beto', name: 'Beto' }, { id: 'dani', name: 'Dani' }])
+    expect(joined.seats.map((seat) => seat.id)).toEqual(['host', 'beto', 'dani'])
+    expect(joined.scoreboard.scores.dani).toBe(Math.max(joined.scoreboard.scores.host, joined.scoreboard.scores.beto))
+    expect(joined.scoreboard.rejoins.dani).toBe(0)
+
+    const next = act(joined, 'host', { type: 'start-next-round' })
+    expect(next.turnOrder).toContain('dani')
+    expect(next.hands.dani).toHaveLength(7)
+  })
+
+  it('does not seat anyone in the middle of a round or above four players', () => {
+    const playing = start()
+    expect(addLateSeats(playing, [{ id: 'dani', name: 'Dani' }])).toBe(playing)
+
+    const full = addLateSeats(roundEnded(), [{ id: 'carla', name: 'Carla' }, { id: 'dani', name: 'Dani' }, { id: 'eva', name: 'Eva' }])
+    expect(full.seats).toHaveLength(4)
   })
 })
 

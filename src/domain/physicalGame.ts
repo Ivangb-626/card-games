@@ -255,6 +255,26 @@ export function startNextRound(game: PhysicalGame): PhysicalGameResult {
   }
 }
 
+/**
+ * Incorpora un jugador nuevo entre rondas con la puntuación más alta de los que siguen en juego
+ * (0 si no queda nadie). Lo usa el Chinchón digital para quien entra con la partida empezada.
+ */
+export function addPlayerBetweenRounds(game: PhysicalGame, player: PhysicalPlayer): PhysicalGameResult {
+  if (game.players.some((existing) => existing.id === player.id)) return { ok: false, error: 'player-not-found' }
+  if (!game.roundClosed || isGameFinished(game)) return { ok: false, error: 'round-open' }
+
+  return {
+    ok: true,
+    game: {
+      ...game,
+      players: [...game.players, player],
+      scores: { ...game.scores, [player.id]: getRejoinScore(game) ?? 0 },
+      roundScores: { ...game.roundScores, [player.id]: null },
+      rejoins: { ...game.rejoins, [player.id]: 0 },
+    },
+  }
+}
+
 export function rejoinPlayer(game: PhysicalGame, playerId: string): PhysicalGameResult {
   if (!game.players.some((player) => player.id === playerId)) return { ok: false, error: 'player-not-found' }
   const rejoinScore = getRejoinScore(game)

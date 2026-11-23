@@ -2,17 +2,20 @@
 // solo importa módulos sin dependencias y con extensión explícita para que Deno los resuelva.
 import {
   bestArrangement,
-  canLayOff,
   closingArrangement,
   closingPoints,
   createSpanishDeck,
+  extendMeld,
   HAND_SIZE,
-  isValidMeld,
+  placeMeld,
   shuffleCards,
   type ChinchonCard,
   type HandArrangement,
+  type JokerEnd,
+  type PlacedMeld,
 } from './chinchon.ts'
 import {
+  addPlayerBetweenRounds,
   canRejoin,
   canStartNextRound,
   closeRound,
@@ -47,6 +50,8 @@ export type DigitalClosing = {
   /** Mano del que cierra sin la carta apartada. */
   hand: ChinchonCard[]
   arrangement: HandArrangement
+  /** Combinaciones del que cierra, con la posición de cada comodín ya fijada. */
+  melds: PlacedMeld[]
   points: number
   layOffs: DigitalLayOff[]
   ready: string[]
@@ -82,7 +87,7 @@ export type DigitalAction =
   | { type: 'draw-deck' }
   | { type: 'draw-discard' }
   | { type: 'discard'; cardId: string }
-  | { type: 'close'; cardId: string }
+  | { type: 'close'; cardId: string; jokerEnd?: JokerEnd }
   | { type: 'lay-off'; cardId: string; meldIndex: number }
   | { type: 'take-back'; cardId: string }
   | { type: 'lay-off-ready' }
@@ -127,7 +132,7 @@ export type DigitalPublicView = {
   handCounts: Record<string, number>
   closing: {
     closerId: string
-    melds: ChinchonCard[][]
+    melds: PlacedMeld[]
     layOffs: DigitalLayOff[]
     ready: string[]
   } | null
@@ -248,7 +253,7 @@ function discardCard(state: DigitalChinchonState, playerId: string, cardId: stri
   }
 }
 
-function closeWith(state: DigitalChinchonState, playerId: string, cardId: string): DigitalResult {
+function closeWith(state: DigitalChinchonState, playerId: string, cardId: string, jokerEnd: JokerEnd = 'low'): DigitalResult {
   const hand = state.hands[playerId]
   const closingCard = hand.find((candidate) => candidate.id === cardId)
   if (!closingCard) return fail('card-not-in-hand')
@@ -261,6 +266,7 @@ function closeWith(state: DigitalChinchonState, playerId: string, cardId: string
     closingCard,
     hand: remaining,
     arrangement,
+    melds: arrangement.melds.map((meld) => placeMeld(meld, jokerEnd) as PlacedMeld),
     points: closingPoints(remaining, arrangement),
     layOffs: [],
     ready: [],
@@ -272,15 +278,26 @@ function closeWith(state: DigitalChinchonState, playerId: string, cardId: string
     hasDrawn: false,
     closing,
   }
-  return { ok: true, state: next.turnOrder.length <= 1 ? finishRound(next) : next }
+  // Con -10 o -50 (sin cartas sueltas) no se liga: la ronda se puntúa directamente.
+  return { ok: true, state: arrangement.loose.length === 0 ? finishRound(next) : next }
 }
 
-/** Cartas de cada combinación del que cierra, incluidas las ya ligadas. */
-export function closingMelds(closing: Pick<DigitalClosing, 'arrangement' | 'layOffs'>): ChinchonCard[][] {
-  return closing.arrangement.melds.map((meld, index) => [
-    ...meld,
-    ...closing.layOffs.filter((layOff) => layOff.meldIndex === index).map((layOff) => layOff.card),
-  ])
+/**
+ * Combinaciones del que cierra con las cartas ligadas, aplicadas en orden.
+ * Devuelve null si alguna ya no encaja (por ejemplo, al retirar una carta de la que dependía otra).
+ */
+function replayLayOffs(melds: PlacedMeld[], layOffs: DigitalLayOff[]): PlacedMeld[] | null {
+  const current = [...melds]
+  for (const layOff of layOffs) {
+    const extended = current[layOff.meldIndex] ? extendMeld(current[layOff.meldIndex], layOff.card) : null
+    if (!extended) return null
+    current[layOff.meldIndex] = extended
+  }
+  return current
+}
+
+export function closingMelds(closing: Pick<DigitalClosing, 'melds' | 'layOffs'>): PlacedMeld[] {
+  return replayLayOffs(closing.melds, closing.layOffs) ?? closing.melds
 }
 
 function layOff(state: DigitalChinchonState, playerId: string, cardId: string, meldIndex: number): DigitalResult {
@@ -291,7 +308,7 @@ function layOff(state: DigitalChinchonState, playerId: string, cardId: string, m
   if (!card || closing.layOffs.some((item) => item.card.id === cardId)) return fail('card-not-in-hand')
   const meld = closingMelds(closing)[meldIndex]
   if (!meld) return fail('invalid-meld')
-  if (!canLayOff(meld, card)) return fail('cannot-lay-off')
+  if (!extendMeld(meld, card)) return fail('cannot-lay-off')
 
   return {
     ok: true,
@@ -305,7 +322,7 @@ function takeBack(state: DigitalChinchonState, playerId: string, cardId: string)
   const layOffs = closing.layOffs.filter((item) => !(item.playerId === playerId && item.card.id === cardId))
   if (layOffs.length === closing.layOffs.length) return fail('card-not-in-hand')
   // Retirar una carta no puede romper una escalera que otros han seguido ampliando.
-  if (!closingMelds({ ...closing, layOffs }).every(isValidMeld)) return fail('invalid-meld')
+  if (!replayLayOffs(closing.melds, layOffs)) return fail('invalid-meld')
   return { ok: true, state: { ...state, closing: { ...closing, layOffs } } }
 }
 
@@ -387,7 +404,9 @@ export function applyDigitalAction(
         return action.type === 'draw-deck' ? drawFromDeck(state, playerId, random) : drawFromDiscard(state, playerId)
       }
       if (!state.hasDrawn) return fail('must-draw-first')
-      return action.type === 'discard' ? discardCard(state, playerId, action.cardId) : closeWith(state, playerId, action.cardId)
+      return action.type === 'discard'
+        ? discardCard(state, playerId, action.cardId)
+        : closeWith(state, playerId, action.cardId, action.jokerEnd)
     }
     case 'lay-off':
     case 'take-back':
@@ -418,6 +437,23 @@ export function applyDigitalAction(
       return { ok: true, state: { ...state, nextRoundReady } }
     }
   }
+}
+
+/**
+ * Incorpora entre rondas a quienes han entrado en la sala con la partida empezada, hasta el máximo de
+ * jugadores. Entran con la puntuación más alta de los que siguen en juego y juegan desde la siguiente ronda.
+ */
+export function addLateSeats(state: DigitalChinchonState, seats: DigitalSeat[]): DigitalChinchonState {
+  if (state.phase !== 'round-ended') return state
+  let next = state
+  for (const seat of seats) {
+    if (next.seats.length >= DIGITAL_MAX_PLAYERS) break
+    if (next.seats.some((existing) => existing.id === seat.id)) continue
+    const added = addPlayerBetweenRounds(next.scoreboard, { id: seat.id, name: seat.name })
+    if (!added.ok) continue
+    next = { ...next, seats: [...next.seats, seat], scoreboard: added.game }
+  }
+  return next
 }
 
 export function publicView(state: DigitalChinchonState): DigitalPublicView {

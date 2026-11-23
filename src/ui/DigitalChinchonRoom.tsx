@@ -1,11 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   bestArrangement,
-  canLayOff,
   closingArrangement,
+  jokerEndOptions,
+  jokerRankForEnd,
+  orderedMeldCards,
   sortCards,
   rankLabel,
   type ChinchonCard,
+  type JokerEnd,
 } from '../domain/chinchon'
 import { requiredNextRoundReady, type DigitalRevealedHand } from '../domain/digitalChinchon'
 import { canRejoin, getLowestScorePlayers, getRejoinScore, getWinners, isPlayerEliminated } from '../domain/physicalGame'
@@ -54,6 +57,10 @@ const copy = {
     discard: 'Descartar',
     close: 'Cerrar con esta carta',
     closeHint: 'Para cerrar, la carta elegida se aparta y con las otras 7 solo puede quedar una carta suelta de 5 o menos.',
+    closeJokerAs: (label: string) => `Cerrar con el comodín como ${label}`,
+    jokerAs: (label: string) => `comodín como ${label}`,
+    joining: 'Entrando en la partida…',
+    lateJoinNote: 'Has entrado con la partida empezada: jugarás desde la siguiente ronda.',
     cards: (count: number) => count === 1 ? '1 carta' : `${count} cartas`,
     out: 'Fuera',
     closedBy: (name: string) => `${name} ha cerrado. Coloca tus cartas sueltas en sus combinaciones y pulsa «Listo».`,
@@ -122,6 +129,10 @@ const copy = {
     discard: 'Discard',
     close: 'Close with this card',
     closeHint: 'To close, the chosen card is set aside and the other 7 may leave at most one loose card worth 5 or less.',
+    closeJokerAs: (label: string) => `Close with the joker as ${label}`,
+    jokerAs: (label: string) => `joker as ${label}`,
+    joining: 'Joining the game…',
+    lateJoinNote: 'You joined a game in progress: you will play from the next round.',
     cards: (count: number) => count === 1 ? '1 card' : `${count} cards`,
     out: 'Out',
     closedBy: (name: string) => `${name} has closed. Lay your loose cards on their melds and press "Ready".`,
@@ -176,6 +187,8 @@ function cardName(card: ChinchonCard, language: Language): string {
 type CardProps = {
   card: ChinchonCard
   language: Language
+  /** Número que representa un comodín ya colocado. */
+  as?: number | null
   selected?: boolean
   muted?: boolean
   onClick?: () => void
@@ -183,15 +196,18 @@ type CardProps = {
   label?: string
 }
 
-function CardFace({ card, language, selected, muted, onClick, disabled, label }: CardProps) {
+function CardFace({ card, language, as, selected, muted, onClick, disabled, label }: CardProps) {
   const className = `dc-card suit-${card.suit}${selected ? ' is-selected' : ''}${muted ? ' is-muted' : ''}`
+  const asLabel = as ? rankLabel({ id: '', suit: 'oros', rank: as }) : null
   const content = (
     <>
       <span className="dc-card-rank">{rankLabel(card)}</span>
       <span className="dc-card-suit" aria-hidden="true">{SUIT_SYMBOLS[card.suit]}</span>
+      {asLabel && <span className="dc-card-as" aria-hidden="true">={asLabel}</span>}
     </>
   )
-  if (!onClick) return <span className={className} role="img" aria-label={label ?? cardName(card, language)}>{content}</span>
+  const name = asLabel ? `${cardName(card, language)} (${copy[language].jokerAs(asLabel)})` : cardName(card, language)
+  if (!onClick) return <span className={className} role="img" aria-label={label ?? name}>{content}</span>
   return (
     <button className={className} type="button" onClick={onClick} disabled={disabled} aria-pressed={selected} aria-label={label ?? cardName(card, language)}>
       {content}
@@ -229,6 +245,15 @@ export function DigitalChinchonRoom({ room, memberId, language, onLeave }: Props
       window.clearInterval(interval)
     }
   }, [reload, room.id, room.status])
+
+  // Quien entra con la partida empezada pide a la Edge Function que lo siente entre rondas.
+  const lateJoinRequested = useRef(false)
+  const seatedInGame = snapshot?.view.seats.some((seat) => seat.id === memberId) ?? true
+  useEffect(() => {
+    if (seatedInGame || lateJoinRequested.current || snapshot?.view.phase !== 'round-ended') return
+    lateJoinRequested.current = true
+    void sendGameAction(room.id, { type: 'join-game' }).then(() => reload())
+  }, [seatedInGame, snapshot?.view.phase, room.id, reload])
 
   const run = async (action: GameAction) => {
     setPending(true)
@@ -295,8 +320,20 @@ export function DigitalChinchonRoom({ room, memberId, language, onLeave }: Props
   const isMyTurn = view.phase === 'playing' && view.activePlayerId === me
   const canDraw = isMyTurn && !view.hasDrawn && !pending
   const canPlayCard = isMyTurn && view.hasDrawn && !pending
-  const canCloseSelected = canPlayCard && selectedCard !== null
-    && closingArrangement(availableHand.filter((card) => card.id !== selectedCard.id)) !== null
+  const selectedClosing = canPlayCard && selectedCard !== null
+    ? closingArrangement(availableHand.filter((card) => card.id !== selectedCard.id))
+    : null
+  const canCloseSelected = selectedClosing !== null
+  // Si un comodín puede ir por cualquiera de los dos extremos de una escalera, quien cierra elige.
+  const jokerChoices = selectedClosing?.melds
+    .map((meld) => ({ meld, options: jokerEndOptions(meld) }))
+    .find((item) => item.options.length === 2) ?? null
+  const closeOptions: { end: JokerEnd | undefined; label: string }[] = jokerChoices
+    ? jokerChoices.options.map((end) => {
+        const rank = jokerRankForEnd(jokerChoices.meld, end)
+        return { end, label: t.closeJokerAs(rank ? rankLabel({ id: '', suit: 'oros', rank }) : end) }
+      })
+    : [{ end: undefined, label: t.close }]
   const iAmCloser = view.closing?.closerId === me
   const iAmReady = view.closing?.ready.includes(me) ?? false
   const layingOff = view.phase === 'laying-off' && !iAmCloser && view.turnOrder.includes(me) && !iAmReady
@@ -401,22 +438,21 @@ export function DigitalChinchonRoom({ room, memberId, language, onLeave }: Props
       {view.phase === 'laying-off' && view.closing && (
         <section className="dc-closer-melds" aria-label={t.closedBy(nameOf(view.closing.closerId))}>
           {view.closing.melds.map((meld, index) => {
-            const fits = layingOff && selectedCard !== null && canLayOff(meld, selectedCard)
             return (
               <div className="dc-meld-row" key={index}>
                 <div className="dc-meld">
-                  {meld.map((card) => {
+                  {orderedMeldCards(meld).map(({ card, as }) => {
                     const mine = myLayOffs.some((item) => item.card.id === card.id)
                     return mine && layingOff
-                      ? <CardFace key={card.id} card={card} language={language} onClick={() => void run({ type: 'take-back', cardId: card.id })} disabled={pending} label={t.takeBack(cardName(card, language))} selected />
-                      : <CardFace key={card.id} card={card} language={language} />
+                      ? <CardFace key={card.id} card={card} as={as} language={language} onClick={() => void run({ type: 'take-back', cardId: card.id })} disabled={pending} label={t.takeBack(cardName(card, language))} selected />
+                      : <CardFace key={card.id} card={card} as={as} language={language} />
                   })}
                 </div>
                 {layingOff && (
                   <button
                     className="button secondary"
                     type="button"
-                    disabled={!fits || pending}
+                    disabled={!selectedCard || pending}
                     onClick={() => selectedCard && void run({ type: 'lay-off', cardId: selectedCard.id, meldIndex: index })}
                   >{t.layOffHere}</button>
                 )}
@@ -454,7 +490,15 @@ export function DigitalChinchonRoom({ room, memberId, language, onLeave }: Props
           {canPlayCard && (
             <div className="dc-actions">
               <button className="button primary" type="button" disabled={!selectedCard} onClick={() => selectedCard && void run({ type: 'discard', cardId: selectedCard.id })}>{t.discard}</button>
-              <button className="button secondary" type="button" disabled={!canCloseSelected} onClick={() => selectedCard && void run({ type: 'close', cardId: selectedCard.id })}>{t.close}</button>
+              {closeOptions.map((option) => (
+                <button
+                  key={option.label}
+                  className="button secondary"
+                  type="button"
+                  disabled={!canCloseSelected}
+                  onClick={() => selectedCard && void run({ type: 'close', cardId: selectedCard.id, jokerEnd: option.end })}
+                >{option.label}</button>
+              ))}
               <p className="dc-hint">{t.closeHint}</p>
             </div>
           )}
@@ -470,6 +514,10 @@ export function DigitalChinchonRoom({ room, memberId, language, onLeave }: Props
 
       {betweenRounds && (
         <>
+          {!seatedInGame && <p className="dc-status" role="status">{t.joining}</p>}
+          {seatedInGame && view.phase === 'round-ended' && !view.turnOrder.includes(me) && !iAmOut && (
+            <p className="dc-status" role="status">{t.lateJoinNote}</p>
+          )}
           {view.phase === 'finished' && (
             <p className="summary-winner" role="status">
               {winners.length > 0
@@ -502,7 +550,7 @@ export function DigitalChinchonRoom({ room, memberId, language, onLeave }: Props
                         return (
                           <td key={seat.id}>
                             <span className="summary-points">{points === null ? '—' : points > 0 ? `+${points}` : points}</span>
-                            <span className="summary-total">{record.totals[seat.id]}</span>
+                            <span className="summary-total">{record.totals[seat.id] ?? '—'}</span>
                           </td>
                         )
                       })}

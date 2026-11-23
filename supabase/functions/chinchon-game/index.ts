@@ -2,6 +2,7 @@
 // guarda el estado completo y publica la vista común y la mano privada de cada jugador.
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import {
+  addLateSeats,
   applyDigitalAction,
   privateHands,
   publicEventData,
@@ -11,7 +12,7 @@ import {
   type DigitalChinchonState,
 } from '../_shared/digitalChinchon.ts'
 
-type GameAction = DigitalAction | { type: 'start-game' }
+type GameAction = DigitalAction | { type: 'start-game' } | { type: 'join-game' }
 
 type Member = {
   id: string
@@ -43,6 +44,7 @@ function readAction(value: unknown): GameAction | null {
   const withCard = typeof candidate.cardId === 'string' && candidate.cardId.length > 0 && candidate.cardId.length < 40
   switch (candidate.type) {
     case 'start-game':
+    case 'join-game':
     case 'draw-deck':
     case 'draw-discard':
     case 'lay-off-ready':
@@ -51,9 +53,12 @@ function readAction(value: unknown): GameAction | null {
     case 'ready-next-round':
       return { type: candidate.type }
     case 'discard':
-    case 'close':
     case 'take-back':
       return withCard ? { type: candidate.type, cardId: candidate.cardId as string } : null
+    case 'close':
+      if (!withCard) return null
+      if (candidate.jokerEnd !== undefined && candidate.jokerEnd !== 'low' && candidate.jokerEnd !== 'high') return null
+      return { type: 'close', cardId: candidate.cardId as string, jokerEnd: candidate.jokerEnd as 'low' | 'high' | undefined }
     case 'lay-off':
       return withCard && Number.isSafeInteger(candidate.meldIndex)
         ? { type: 'lay-off', cardId: candidate.cardId as string, meldIndex: candidate.meldIndex as number }
@@ -139,7 +144,15 @@ Deno.serve(async (request) => {
   const { data: game } = await admin.from('room_games').select('state, version').eq('room_id', roomId).maybeSingle()
   if (!game) return json({ error: 'game-not-started' }, 409)
 
-  const result = applyDigitalAction(game.state as DigitalChinchonState, me.id, action, secureRandom)
+  // Quien haya entrado en la sala con la partida empezada se sienta entre rondas.
+  const current = game.state as DigitalChinchonState
+  const seated = addLateSeats(current, members.map((member) => ({ id: member.id, name: member.display_name })))
+  if (action.type === 'join-game') {
+    if (seated === current) return json({ ok: true, version: game.version })
+    return saveGame(admin, roomId, Number(game.version), seated, me.id, 'chinchon_player_joined', {})
+  }
+
+  const result = applyDigitalAction(seated, me.id, action, secureRandom)
   if (!result.ok) return json({ error: result.error }, 400)
   return saveGame(admin, roomId, Number(game.version), result.state, me.id, `chinchon_${action.type}`, publicEventData(action))
 })

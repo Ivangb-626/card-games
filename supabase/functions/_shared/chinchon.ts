@@ -154,8 +154,93 @@ export function closingPoints(hand: ChinchonCard[], arrangement: HandArrangement
   return arrangement.loose.length === 0 ? CLOSE_BONUS : arrangement.points
 }
 
-export function canLayOff(meld: ChinchonCard[], card: ChinchonCard): boolean {
-  return isValidMeld([...meld, card])
+/**
+ * Combinación ya colocada en la mesa: el comodín ocupa una posición fija.
+ * En las escaleras, `low` y `high` son posiciones de RANK_ORDER.
+ */
+export type PlacedMeld =
+  | { kind: 'group'; rank: number; cards: ChinchonCard[] }
+  | { kind: 'run'; suit: SpanishSuit; low: number; high: number; cards: ChinchonCard[] }
+
+/** Extremo de la escalera que ocupa un comodín que no tapa ningún hueco. */
+export type JokerEnd = 'low' | 'high'
+
+function runBounds(real: ChinchonCard[]): { low: number; high: number } {
+  const positions = real.map(rankPosition)
+  return { low: Math.min(...positions), high: Math.max(...positions) }
+}
+
+/** Extremos posibles para el comodín sobrante de una escalera (vacío si no hay que elegir). */
+export function jokerEndOptions(cards: ChinchonCard[]): JokerEnd[] {
+  if (!isValidMeld(cards) || !cards.some(isJoker)) return []
+  const real = cards.filter((card) => !isJoker(card))
+  if (real.every((card) => card.rank === real[0].rank)) return []
+  const { low, high } = runBounds(real)
+  if (high - low + 1 > real.length) return []
+  return [low > 0 ? 'low' as const : null, high < RANK_ORDER.length - 1 ? 'high' as const : null]
+    .filter((end): end is JokerEnd => end !== null)
+}
+
+export function placeMeld(cards: ChinchonCard[], jokerEnd: JokerEnd = 'low'): PlacedMeld | null {
+  if (!isValidMeld(cards)) return null
+  const real = cards.filter((card) => !isJoker(card))
+  if (real.every((card) => card.rank === real[0].rank)) return { kind: 'group', rank: real[0].rank, cards: [...cards] }
+
+  let { low, high } = runBounds(real)
+  const options = jokerEndOptions(cards)
+  if (options.length > 0) {
+    const end = options.includes(jokerEnd) ? jokerEnd : options[0]
+    if (end === 'low') low -= 1
+    else high += 1
+  }
+  return { kind: 'run', suit: real[0].suit as SpanishSuit, low, high, cards: [...cards] }
+}
+
+/** Liga una carta a una combinación colocada respetando la posición del comodín; null si no encaja. */
+export function extendMeld(meld: PlacedMeld, card: ChinchonCard): PlacedMeld | null {
+  const hasJoker = meld.cards.some(isJoker)
+  if (meld.kind === 'group') {
+    if (meld.cards.length >= SPANISH_SUITS.length) return null
+    if (isJoker(card)) return hasJoker ? null : { ...meld, cards: [...meld.cards, card] }
+    if (card.rank !== meld.rank || meld.cards.some((other) => other.suit === card.suit)) return null
+    return { ...meld, cards: [...meld.cards, card] }
+  }
+
+  if (isJoker(card)) {
+    if (hasJoker) return null
+    if (meld.high < RANK_ORDER.length - 1) return { ...meld, high: meld.high + 1, cards: [...meld.cards, card] }
+    if (meld.low > 0) return { ...meld, low: meld.low - 1, cards: [...meld.cards, card] }
+    return null
+  }
+  if (card.suit !== meld.suit) return null
+  const position = rankPosition(card)
+  if (position === meld.low - 1) return { ...meld, low: position, cards: [...meld.cards, card] }
+  if (position === meld.high + 1) return { ...meld, high: position, cards: [...meld.cards, card] }
+  return null
+}
+
+/** Cartas en orden de mesa; `as` es el número que representa el comodín. */
+export function orderedMeldCards(meld: PlacedMeld): { card: ChinchonCard; as: number | null }[] {
+  const joker = meld.cards.find(isJoker) ?? null
+  if (meld.kind === 'group') {
+    const real = meld.cards.filter((card) => !isJoker(card)).map((card) => ({ card, as: null }))
+    return joker ? [...real, { card: joker, as: meld.rank }] : real
+  }
+  const bySlot = new Map(meld.cards.filter((card) => !isJoker(card)).map((card) => [rankPosition(card), card]))
+  const ordered: { card: ChinchonCard; as: number | null }[] = []
+  for (let position = meld.low; position <= meld.high; position += 1) {
+    const card = bySlot.get(position)
+    if (card) ordered.push({ card, as: null })
+    else if (joker) ordered.push({ card: joker, as: RANK_ORDER[position] })
+  }
+  return ordered
+}
+
+/** Número que representaría el comodín al colocar la escalera por un extremo concreto. */
+export function jokerRankForEnd(cards: ChinchonCard[], end: JokerEnd): number | null {
+  const placed = placeMeld(cards, end)
+  if (!placed) return null
+  return orderedMeldCards(placed).find((item) => item.as !== null)?.as ?? null
 }
 
 const RANK_LABELS: Record<number, string> = { 10: 'S', 11: 'C', 12: 'R' }

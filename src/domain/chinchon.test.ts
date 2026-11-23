@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
   bestArrangement,
-  canLayOff,
   closingArrangement,
   closingPoints,
   createSpanishDeck,
+  extendMeld,
   isChinchon,
+  jokerEndOptions,
+  orderedMeldCards,
+  placeMeld,
   isValidMeld,
   minimumUnmatchedPoints,
   type ChinchonCard,
@@ -46,10 +49,47 @@ describe('Chinchón melds', () => {
   })
 
   it('validates laying a card off on an existing meld', () => {
-    const run = [card('bastos', 4), card('bastos', 5), card('bastos', 6)]
-    expect(canLayOff(run, card('bastos', 7))).toBe(true)
-    expect(canLayOff(run, card('oros', 7))).toBe(false)
-    expect(canLayOff(run, joker())).toBe(true)
+    const run = placeMeld([card('bastos', 4), card('bastos', 5), card('bastos', 6)])!
+    expect(extendMeld(run, card('bastos', 7))).not.toBeNull()
+    expect(extendMeld(run, card('bastos', 3))).not.toBeNull()
+    expect(extendMeld(run, card('oros', 7))).toBeNull()
+    expect(extendMeld(run, card('bastos', 10))).toBeNull()
+
+    const group = placeMeld([card('oros', 5), card('copas', 5), card('bastos', 5)])!
+    expect(extendMeld(group, card('espadas', 5))).not.toBeNull()
+    expect(extendMeld(group, card('espadas', 6))).toBeNull()
+  })
+})
+
+describe('Chinchón jokers keep their position once placed', () => {
+  const sevenSota = [joker(), card('oros', 7), card('oros', 10)]
+
+  it('lets the closer choose which end an edge joker takes', () => {
+    expect(jokerEndOptions(sevenSota)).toEqual(['low', 'high'])
+    expect(orderedMeldCards(placeMeld(sevenSota, 'low')!).map((item) => item.as)).toEqual([6, null, null])
+    expect(orderedMeldCards(placeMeld(sevenSota, 'high')!).map((item) => item.as)).toEqual([null, null, 11])
+  })
+
+  it('does not let a king join when the joker stands for a 6 before 7 and sota', () => {
+    const asSix = placeMeld(sevenSota, 'low')!
+    expect(extendMeld(asSix, card('oros', 12))).toBeNull()
+    expect(extendMeld(asSix, card('oros', 11))).not.toBeNull()
+    expect(extendMeld(asSix, card('oros', 5))).not.toBeNull()
+
+    const asCaballo = placeMeld(sevenSota, 'high')!
+    expect(extendMeld(asCaballo, card('oros', 12))).not.toBeNull()
+    expect(extendMeld(asCaballo, card('oros', 6))).not.toBeNull()
+  })
+
+  it('fixes a joker that fills a gap without asking', () => {
+    const gap = [card('copas', 2), joker(), card('copas', 4)]
+    expect(jokerEndOptions(gap)).toEqual([])
+    expect(orderedMeldCards(placeMeld(gap)!).map((item) => item.as)).toEqual([null, 3, null])
+  })
+
+  it('allows only one joker per meld when laying off', () => {
+    const withJoker = placeMeld([card('copas', 2), joker(), card('copas', 4)])!
+    expect(extendMeld(withJoker, joker(2))).toBeNull()
   })
 })
 

@@ -2,7 +2,8 @@ import type { ChinchonCard } from '../../domain/chinchon'
 import type { DigitalAction, DigitalPublicView } from '../../domain/digitalChinchon'
 import { getSupabaseClient } from './client'
 
-export type GameAction = DigitalAction | { type: 'start-game' }
+/** start-game lo usa el anfitrión; join-game, quien entra en la sala con la partida empezada. */
+export type GameAction = DigitalAction | { type: 'start-game' } | { type: 'join-game' }
 
 export type GameSnapshot = {
   view: DigitalPublicView

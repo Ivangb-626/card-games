@@ -592,7 +592,7 @@ function App() {
       'room-not-found': 'El código no es válido o la sala ha caducado.',
       'room-full': 'La sala está llena.',
       'name-duplicate': 'Ya hay alguien con ese nombre en la sala.',
-      'game-started': 'La partida de esa sala ya ha empezado.',
+      'game-started': 'La partida de esa sala está en juego: solo se puede entrar entre rondas.',
       'supabase-error': fallback,
     }
     return detail && (error === 'guest-session-failed' || error === 'supabase-error')

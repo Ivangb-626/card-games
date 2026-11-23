@@ -127,9 +127,12 @@ Primer hito jugable del modo digital. Lo que falta está en `TASKS.md`, Fase 4.
 - En su turno, el jugador roba del mazo o del descarte y después descarta o cierra. Si el mazo se agota, se rebaraja el descarte dejando visible la última carta.
 - Cerrar: se aparta una carta boca abajo y, con las otras 7, solo puede quedar una carta suelta que no sea comodín y valga 5 o menos.
 - Puntos de quien cierra: −50 con chinchón (7 seguidas del mismo palo, sin comodín), −10 sin cartas sueltas o el valor de su carta suelta.
-- Ligar: tras el cierre, los demás colocan a la vez sus cartas sueltas en las combinaciones de quien cerró y pulsan «Listo». Pueden devolver una carta mientras no rompa una combinación que otro haya seguido ampliando.
+- Al cerrar, cada comodín queda fijo en la posición que ocupa. Si en una escalera puede ir por cualquiera de los dos extremos (por ejemplo, junto a 7 y sota puede ser 6 o caballo), quien cierra elige. Con el comodín como 6, un rey ya no puede ligarse a 7-sota.
+- Ligar: tras el cierre, los demás colocan a la vez sus cartas sueltas en las combinaciones de quien cerró y pulsan «Listo». Solo se puede ligar por los extremos de una escalera o completar un grupo, respetando la posición del comodín. Un comodín ligado a una escalera ocupa el extremo superior si está libre. La interfaz no indica qué cartas encajan: el servidor valida cada intento. Se puede devolver una carta mientras no rompa una combinación que otro haya seguido ampliando.
+- Con un cierre de −10 o −50 (sin cartas sueltas) no se liga: la ronda se puntúa al cerrar.
 - Los demás suman sus puntos sueltos, con la mejor combinación posible de las cartas no ligadas. El comodín suelto vale 25 y las figuras 10.
 - El marcador entre rondas reutiliza las reglas del modo físico (`physicalGame.ts`): tope de 70 por ronda, mínimo de −50 (gana), fuera a partir de 101 y reenganche entre rondas si quedan al menos dos jugadores en juego.
+- Con la partida empezada se puede entrar en la sala solo entre rondas, hasta 4 jugadores. Quien entra lo hace con la puntuación más alta de los que siguen en juego y juega desde la siguiente ronda.
 - La siguiente ronda empieza cuando el anfitrión la inicia o cuando dos jugadores no anfitriones pulsan «Listo» (uno si solo hay uno). Empieza el siguiente jugador en juego de la mesa.
 - Al terminar cada ronda se muestran todas las manos.
 
@@ -147,7 +150,7 @@ Primer hito jugable del modo digital. Lo que falta está en `TASKS.md`, Fase 4.
 - En este proyecto las tablas nuevas no reciben permisos por defecto: cada migración que cree una tabla debe conceder `select` a `authenticated` (si la leen los clientes, siempre con RLS) y a `service_role` (si la usa la Edge Function). Sin permisos, ni Realtime ni la Edge Function ven los datos.
 - Además de Realtime, la sala se relee cada 5 s y la partida cada 4 s como respaldo.
 - Cada jugada válida queda en `room_events` con jugador, tipo, datos y versión; la carta con la que se cierra no se registra porque está boca abajo.
-- Una vez empezada la partida, solo pueden volver a entrar en la sala quienes ya eran miembros. Cada jugada mantiene viva la sala 30 minutos más.
+- Una vez empezada la partida, `join_private_room` solo admite jugadores nuevos cuando la vista común está en `round-ended`. El cliente nuevo envía `join-game` y la Edge Function lo sienta (`addLateSeats`), lo que también ocurre en cualquier otra jugada de ese intervalo. Cada jugada mantiene viva la sala 30 minutos más.
 - Reconexión básica: el dispositivo recuerda la última sala y, al recargar, vuelve a entrar con la misma identidad local.
 - Despliegue: `docs/DEPLOY_SUPABASE.md`.
 

@@ -113,7 +113,10 @@
 - [ ] Acabar la partida a mano desde la sala digital, como en el modo físico.
 - [ ] Expulsar o sustituir a quien abandona antes de empezar.
 - [ ] Reordenar la mano manualmente (ahora se agrupa automáticamente por combinaciones).
-- [ ] Animaciones de robo y descarte, y avisos de turno.
+- [ ] Mejorar el diseño visual de las cartas de la mesa digital (ahora son placas con número y símbolo del palo).
+- [ ] Animar las cartas: reparto, robo, descarte, cierre y ligar. También avisos de turno.
+- [ ] Ligar un comodín eligiendo el extremo de la escalera (ahora ocupa el superior si está libre).
+- [ ] Que quien cierra pueda reordenar sus combinaciones antes de cerrar, más allá de elegir el extremo del comodín.
 - [ ] Confirmar si se permite más de un comodín por combinación (ahora, como mucho uno).
 - [ ] Revisar la interfaz de la mesa en móvil, teclado y lector de pantalla.
 
